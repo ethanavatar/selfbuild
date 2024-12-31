@@ -1,6 +1,6 @@
 #include <stdio.h>
+#include "hello.h"
 
 int main(void) {
-    fprintf(stderr, "Hello, Sailor!");
     return 0;
 }
