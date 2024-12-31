@@ -1,7 +1,7 @@
 #ifndef SELF_BUILD_H
 #define SELF_BUILD_H
 
-bool      win32_path_exists(const char *);
+bool      win32_dir_exists(const char *);
 long long win32_get_file_last_modified_time(const char *);
 int       win32_wait_for_command(const char *, const char *);
 

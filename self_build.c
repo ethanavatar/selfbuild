@@ -1,12 +1,33 @@
 #include <stddef.h>
+#include <stdarg.h>
 #include <assert.h>
 
 #include <windows.h>
+#include <shlwapi.h>
+
+// @Note: Interesting read
+// https://stackoverflow.com/questions/52537188/format-strings-safely-when-vsnprintf-is-not-available
+static char *format_cstring(const char *format, ...) {
+    char *result = NULL;
+    va_list args;
+    va_start(args, format);
+
+    int size = vsnprintf(NULL, 0, format, args);
+    if (size > 0) {
+        result = calloc(size + 1, sizeof(char));
+        memset(result, 0, size + 1);
+        vsnprintf(result, size + 1, format, args);
+    }
+
+    va_end(args);
+    return result;
+}
 
 // https://stackoverflow.com/a/6218957
-bool win32_path_exists(const char *path) {
+bool win32_dir_exists(const char *path) {
     DWORD attributes = GetFileAttributes(path);
-    return attributes != INVALID_FILE_ATTRIBUTES;
+    return (attributes != INVALID_FILE_ATTRIBUTES) &&
+           (attributes &  FILE_ATTRIBUTE_DIRECTORY);
 }
 
 long long win32_get_file_last_modified_time(const char *path) {
@@ -33,18 +54,14 @@ long long win32_get_file_last_modified_time(const char *path) {
 }
 
 int win32_wait_for_command(const char *path, const char *parameters) {
-    char *cmd_format = "%s %s";
-    int command_length = snprintf(NULL, 0, cmd_format, path, parameters);
-    char *command = calloc(command_length + 1, sizeof(char));
-    memset(command, 0, command_length + 1);
-    sprintf(command, cmd_format, path, parameters);
+    char *command = format_cstring("%s %s", path, parameters);
 
     STARTUPINFO startup_info = { 0 };
-    startup_info.cb = sizeof(startup_info);
-    startup_info.dwFlags = STARTF_USESTDHANDLES;
-    startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    startup_info.cb         = sizeof(startup_info);
+    startup_info.dwFlags    = STARTF_USESTDHANDLES;
+    startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
     startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    startup_info.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
 
     char cwd[MAX_PATH] = { 0 };
     DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
@@ -102,25 +119,25 @@ size_t build_module(struct Build *build, const char *artifacts_directory) {
     size_t compiled_count = 0;
     for (size_t i = 0; i < build->source_files_count; ++i) {
         char *source_file_path = build->source_files[i];
+        char *object_file_path = format_cstring("%s/%s.o", artifacts_directory, source_file_path);
 
-        int path_length = snprintf(NULL, 0, "%s/%s.o", artifacts_directory, source_file_path);
-        char *object_file_path = calloc(path_length + 1, sizeof(char));
-        object_file_path[path_length] = 0;
-        sprintf(object_file_path, "%s/%s.o", artifacts_directory, source_file_path);
+        char *dir;
+        _splitpath(object_file_path, NULL, dir, NULL, NULL);
+        if (!win32_dir_exists(dir)) CreateDirectory(dir, NULL);
 
         if (should_recompile(source_file_path, object_file_path)) {
-            path_length = snprintf(NULL, 0, "-c %s -o %s", source_file_path, object_file_path);
-            char *parameters = calloc(path_length + 1, sizeof(char));
-            parameters[path_length] = 0;
-            sprintf(parameters, "-c %s -o %s", source_file_path, object_file_path);
-
+            char *parameters = format_cstring("-c %s -o %s", source_file_path, object_file_path);
             fprintf(stderr, "+ clang.exe %s\n", parameters);
 
             // @TODO: Set working directory to be next to the root build script
             assert(win32_wait_for_command("clang.exe", parameters) == 0);
             build->should_recompile = true;
             compiled_count++;
+
+            free(parameters);
         }
+
+        free(object_file_path);
     }
 
     link_objects(build, artifacts_directory);
@@ -150,12 +167,7 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
         }
 
         if (build->kind == Build_Kind_Module) {
-            const char *fmt = "/NOLOGO /OUT:%s/%s.lib %s";
-            int args_length = snprintf(NULL, 0, fmt, artifacts_directory, build->name, all_objects);
-            char *link_parameters = calloc(args_length + 1, sizeof(char));
-            link_parameters[args_length] = 0;
-
-            sprintf(link_parameters, fmt, artifacts_directory, build->name, all_objects);
+            const char *link_parameters = format_cstring("/NOLOGO /OUT:%s/%s.lib %s", artifacts_directory, build->name, all_objects);
 
             fprintf(stderr, "+ lib.exe %s\n", link_parameters);
             win32_wait_for_command(
@@ -163,16 +175,15 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
                 "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe",
                 link_parameters
             );
+            free(link_parameters);
 
         } else if (build->kind == Build_Kind_Executable) {
-            const char *fmt = "-o %s/%s.exe %s";
-            int args_length = snprintf(NULL, 0, fmt, artifacts_directory, build->name, all_objects);
-            char *link_parameters = calloc(args_length + 1, sizeof(char));
-            link_parameters[args_length] = 0;
+            const char *link_parameters = format_cstring("-o %s/%s.exe %s", artifacts_directory, build->name, all_objects);
 
-            sprintf(link_parameters, fmt, artifacts_directory, build->name, all_objects);
             fprintf(stderr, "+ clang.exe %s\n", link_parameters);
             win32_wait_for_command("clang.exe", link_parameters);
+
+            free(link_parameters);
         }
 
     }
