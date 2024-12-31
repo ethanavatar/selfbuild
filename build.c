@@ -18,6 +18,9 @@ int build(void) {
     // They will all use an artifacts folder at the top level to avoid mess in subdirectories
 
     // @TODO: Canonical paths
+    // @Refs:
+    // - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea
+    // - https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathcanonicalizea
     if (!win32_path_exists(artifacts_directory)) CreateDirectory(artifacts_directory, NULL);
     bootstrap("build.c", "build.exe", "bin/build.old");
 
