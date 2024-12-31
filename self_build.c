@@ -32,20 +32,39 @@ long long win32_get_file_last_modified_time(const char *path) {
     return last_modified_time;
 }
 
-void win32_wait_for_command(const char *path, const char *parameters) {
+int win32_wait_for_command(const char *path, const char *parameters) {
+    char command[256] = { 0 };
+    sprintf(command, "%s %s", path, parameters);
 
-    // @TODO: Probably want to move this into CreateProcessA for pipe control
-    // @Ref: https://stackoverflow.com/a/31572351
-    SHELLEXECUTEINFO ShExecInfo = { 0 };
-    ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-    ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-    ShExecInfo.lpVerb = "open";
-    ShExecInfo.lpFile = path;        
-    ShExecInfo.lpParameters = parameters;   
+    STARTUPINFO startup_info = { 0 };
+    startup_info.cb = sizeof(startup_info);
+    startup_info.dwFlags = STARTF_USESTDHANDLES;
+    startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
-    ShellExecuteExA(&ShExecInfo);
-    WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
-    CloseHandle(ShExecInfo.hProcess);
+    PROCESS_INFORMATION process_info = { 0 };
+    assert(CreateProcessA(
+        NULL,
+        command,
+        NULL, NULL, true, 0, NULL,
+        NULL, // @TODO: set working directory
+        &startup_info,
+        &process_info
+    ));
+    WaitForSingleObject(process_info.hProcess, INFINITE);
+
+    DWORD exit_code;
+    assert(GetExitCodeProcess(process_info.hProcess, &exit_code));
+
+    CloseHandle(process_info.hProcess);
+    return exit_code;
+}
+
+bool should_recompile(const char *source_file_path, const char *object_file_path) {
+    long long source_file_time = win32_get_file_last_modified_time(source_file_path);
+    long long object_file_time = win32_get_file_last_modified_time(object_file_path);
+    return source_file_time > object_file_time;
 }
 
 void build_source_files(struct Build *build, const char *artifacts_directory) {
@@ -54,10 +73,7 @@ void build_source_files(struct Build *build, const char *artifacts_directory) {
         char  object_file_path[64] = { 0 };
         sprintf(object_file_path, "%s/%s.o", artifacts_directory, source_file_path);
 
-        long long source_ft = win32_get_file_last_modified_time(source_file_path);
-        long long object_ft = win32_get_file_last_modified_time(object_file_path);
-
-        if (source_ft > object_ft) {
+        if (should_recompile(source_file_path, object_file_path)) {
             char parameters[64] = { 0 };
             sprintf(parameters, "-c %s -o %s", source_file_path, object_file_path);
 

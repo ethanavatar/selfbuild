@@ -3,7 +3,7 @@
 
 bool      win32_path_exists(const char *);
 long long win32_get_file_last_modified_time(const char *);
-void      win32_wait_for_command(const char *, const char *);
+int       win32_wait_for_command(const char *, const char *);
 
 enum Build_Kind {
     Build_Kind_Module,
@@ -16,6 +16,8 @@ struct Build {
     size_t  source_files_count;
     bool should_recompile;
 };
+
+bool should_recompile(const char *, const char *);
 
 void build_source_files(struct Build *, const char *);
 void link_objects(struct Build *, const char *);
