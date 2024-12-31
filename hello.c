@@ -1,5 +1,5 @@
 #include <stdio.h>
 
 void hello(void) {
-    fprintf(stderr, "Hello, Sailor!");
+    fprintf(stderr, "Hello, Sailor!\n");
 }

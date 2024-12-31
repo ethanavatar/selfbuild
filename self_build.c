@@ -34,7 +34,7 @@ long long win32_get_file_last_modified_time(const char *path) {
 
 int win32_wait_for_command(const char *path, const char *parameters) {
     char *cmd_format = "%s %s";
-    int command_length = sprintf(NULL, cmd_format, path, parameters);
+    int command_length = snprintf(NULL, 0, cmd_format, path, parameters);
     char *command = calloc(command_length + 1, sizeof(char));
     memset(command, 0, command_length + 1);
     sprintf(command, cmd_format, path, parameters);
@@ -46,7 +46,7 @@ int win32_wait_for_command(const char *path, const char *parameters) {
     startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
-    LPTSTR cwd[MAX_PATH] = { 0 };
+    char cwd[MAX_PATH] = { 0 };
     DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
 
     PROCESS_INFORMATION process_info = { 0 };
@@ -93,28 +93,23 @@ void bootstrap(const char *build_script_path, const char *executable_path, const
 }
 
 size_t build_module(struct Build *build, const char *artifacts_directory) {
-    fprintf(stderr, "%s dep count: %zu\n", build->name, build->dependencies_count);
     for (size_t dep = 0; dep < build->dependencies_count; ++dep) {
         struct Build *module = build->dependencies[dep];
         size_t compiled = build_module(module, artifacts_directory);
         build->should_recompile = compiled > 0;
-        fprintf(stderr, "done module: %s\n", module->name);
     }
 
     size_t compiled_count = 0;
-    fprintf(stderr, "%s source count: %zu\n", build->name, build->source_files_count);
-
     for (size_t i = 0; i < build->source_files_count; ++i) {
         char *source_file_path = build->source_files[i];
-        fprintf(stderr, "building %s\n", source_file_path);
 
-        int path_length = sprintf(NULL, "%s/%s.o", artifacts_directory, source_file_path);
+        int path_length = snprintf(NULL, 0, "%s/%s.o", artifacts_directory, source_file_path);
         char *object_file_path = calloc(path_length + 1, sizeof(char));
         object_file_path[path_length] = 0;
         sprintf(object_file_path, "%s/%s.o", artifacts_directory, source_file_path);
 
-        //if (should_recompile(source_file_path, object_file_path)) {
-            path_length = sprintf(NULL, "-c %s -o %s", source_file_path, object_file_path);
+        if (should_recompile(source_file_path, object_file_path)) {
+            path_length = snprintf(NULL, 0, "-c %s -o %s", source_file_path, object_file_path);
             char *parameters = calloc(path_length + 1, sizeof(char));
             parameters[path_length] = 0;
             sprintf(parameters, "-c %s -o %s", source_file_path, object_file_path);
@@ -124,7 +119,8 @@ size_t build_module(struct Build *build, const char *artifacts_directory) {
             // @TODO: Set working directory to be next to the root build script
             assert(win32_wait_for_command("clang.exe", parameters) == 0);
             build->should_recompile = true;
-        //}
+            compiled_count++;
+        }
     }
 
     link_objects(build, artifacts_directory);
@@ -132,9 +128,9 @@ size_t build_module(struct Build *build, const char *artifacts_directory) {
 }
 
 void link_objects(struct Build *build, const char *artifacts_directory) {
-    //if (build->should_recompile) {
+    if (build->should_recompile) {
         size_t top = 0;
-        char all_objects[16] = { 0 };
+        char all_objects[255] = { 0 };
 
         for (size_t i = 0; i < build->source_files_count; ++i) {
             // I wish I could do something like this. Maybe I can?
@@ -146,9 +142,16 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
             top += length;
         }
 
+        for (size_t i = 0; i < build->dependencies_count; ++i) {
+            char library_file_path[64] = { 0 };
+            size_t length = sprintf(library_file_path, "%s/%s.lib ", artifacts_directory, build->dependencies[i]->name);
+            memcpy(&all_objects[top], library_file_path, length);
+            top += length;
+        }
+
         if (build->kind == Build_Kind_Module) {
-            const char *fmt = "/OUT:%s/%s.lib %s";
-            int args_length = sprintf(NULL, fmt, artifacts_directory, build->name, all_objects);
+            const char *fmt = "/NOLOGO /OUT:%s/%s.lib %s";
+            int args_length = snprintf(NULL, 0, fmt, artifacts_directory, build->name, all_objects);
             char *link_parameters = calloc(args_length + 1, sizeof(char));
             link_parameters[args_length] = 0;
 
@@ -156,13 +159,14 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
 
             fprintf(stderr, "+ lib.exe %s\n", link_parameters);
             win32_wait_for_command(
+                // @TODO: find this path programatically
                 "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe",
                 link_parameters
             );
 
         } else if (build->kind == Build_Kind_Executable) {
             const char *fmt = "-o %s/%s.exe %s";
-            int args_length = sprintf(NULL, fmt, artifacts_directory, build->name, all_objects);
+            int args_length = snprintf(NULL, 0, fmt, artifacts_directory, build->name, all_objects);
             char *link_parameters = calloc(args_length + 1, sizeof(char));
             link_parameters[args_length] = 0;
 
@@ -171,10 +175,9 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
             win32_wait_for_command("clang.exe", link_parameters);
         }
 
-    //}
+    }
 }
 
 void add_dependency(struct Build *module, struct Build *dependency) {
     module->dependencies[module->dependencies_count++] = dependency;
-    fprintf(stderr, "added dependency \"%s\" to \"%s\"\n", dependency->name, module->name);
 }

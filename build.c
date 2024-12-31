@@ -27,7 +27,6 @@ int build(void) {
         .kind = Build_Kind_Module,
         .source_files = hello_files,
         .source_files_count = sizeof(hello_files) / sizeof(char *),
-        .should_recompile = false,
     };
 
     static char *main_files[] = { "main.c" };
@@ -36,7 +35,6 @@ int build(void) {
         .kind = Build_Kind_Executable,
         .source_files = main_files,
         .source_files_count = sizeof(main_files) / sizeof(char *),
-        .should_recompile = false,
     };
 
     add_dependency(&exe, &lib);
