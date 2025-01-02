@@ -7,7 +7,7 @@
 
 // @Note: Interesting read
 // https://stackoverflow.com/questions/52537188/format-strings-safely-when-vsnprintf-is-not-available
-static char *format_cstring(const char *format, ...) {
+char *format_cstring(const char *format, ...) {
     char *result = NULL;
     va_list args;
     va_start(args, format);
@@ -28,6 +28,12 @@ bool win32_dir_exists(const char *path) {
     DWORD attributes = GetFileAttributes(path);
     return (attributes != INVALID_FILE_ATTRIBUTES) &&
            (attributes &  FILE_ATTRIBUTE_DIRECTORY);
+}
+
+bool win32_file_exists(const char *path) {
+    DWORD attributes = GetFileAttributes(path);
+    return (attributes != INVALID_FILE_ATTRIBUTES) &&
+           (attributes &  FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
 long long win32_get_file_last_modified_time(const char *path) {
@@ -109,24 +115,36 @@ void bootstrap(const char *build_script_path, const char *executable_path, const
     }
 }
 
-size_t build_module(struct Build *build, const char *artifacts_directory) {
+size_t build_module(struct Build_Context *context, struct Build *build) {
+
+    size_t includes_length = 0;
+    char includes[256] = { 0 };
+
     for (size_t dep = 0; dep < build->dependencies_count; ++dep) {
-        struct Build *module = build->dependencies[dep];
-        size_t compiled = build_module(module, artifacts_directory);
+        struct Build *module = &build->dependencies[dep];
+        size_t compiled = build_module(context, module);
         build->should_recompile = compiled > 0;
+
+        char *include = format_cstring("-I%s ", module->root_dir);
+        memcpy(&includes[includes_length], include, strlen(include));
+        includes_length += strlen(include);
+        free(include);
     }
+
 
     size_t compiled_count = 0;
     for (size_t i = 0; i < build->source_files_count; ++i) {
-        char *source_file_path = build->source_files[i];
-        char *object_file_path = format_cstring("%s/%s.o", artifacts_directory, source_file_path);
+        char *source_file_path = format_cstring("%s/%s", build->root_dir, build->source_files[i]);
+        char *object_file_path = format_cstring("%s/%s.o", context->artifacts_directory, source_file_path);
 
-        char *dir;
+        char *dir = NULL;
         _splitpath(object_file_path, NULL, dir, NULL, NULL);
         if (!win32_dir_exists(dir)) CreateDirectory(dir, NULL);
 
+        // @Bug: This does not handle the case where a file doesnt exist.
+        // It just treats it like it doesnt need to be recompiled
         if (should_recompile(source_file_path, object_file_path)) {
-            char *parameters = format_cstring("-c %s -o %s", source_file_path, object_file_path);
+            char *parameters = format_cstring("-c %s -o %s %s", source_file_path, object_file_path, includes);
             fprintf(stderr, "+ clang.exe %s\n", parameters);
 
             // @TODO: Set working directory to be next to the root build script
@@ -135,16 +153,19 @@ size_t build_module(struct Build *build, const char *artifacts_directory) {
             compiled_count++;
 
             free(parameters);
+        } else {
+
+            fprintf(stderr, "skipping %s\n", source_file_path);
         }
 
         free(object_file_path);
     }
 
-    link_objects(build, artifacts_directory);
+    link_objects(context, build);
     return compiled_count;
 }
 
-void link_objects(struct Build *build, const char *artifacts_directory) {
+void link_objects(struct Build_Context *context, struct Build *build) {
     if (build->should_recompile) {
         size_t top = 0;
         char all_objects[255] = { 0 };
@@ -153,21 +174,34 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
             // I wish I could do something like this. Maybe I can?
             // printf("%s, %s!", { "Hello", "World" }, 2);
 
-            char object_file_path[64] = { 0 };
-            size_t length = sprintf(object_file_path, "%s/%s.o ", artifacts_directory, build->source_files[i]);
-            memcpy(&all_objects[top], object_file_path, length);
-            top += length;
+            char *object_file_path = format_cstring(
+                "%s/%s/%s.o ",
+                context->artifacts_directory,
+                build->root_dir,
+                build->source_files[i]
+            );
+            memcpy(&all_objects[top], object_file_path, strlen(object_file_path));
+            top += strlen(object_file_path);
+            free(object_file_path);
         }
 
         for (size_t i = 0; i < build->dependencies_count; ++i) {
-            char library_file_path[64] = { 0 };
-            size_t length = sprintf(library_file_path, "%s/%s.lib ", artifacts_directory, build->dependencies[i]->name);
-            memcpy(&all_objects[top], library_file_path, length);
-            top += length;
+
+            char *library_file_path = format_cstring(
+                "%s/%s/%s.lib ",
+                context->artifacts_directory,
+                build->root_dir,
+                build->dependencies[i].name
+            );
+
+            memcpy(&all_objects[top], library_file_path, strlen(library_file_path));
+            top += strlen(library_file_path);
+            free(library_file_path);
         }
 
         if (build->kind == Build_Kind_Module) {
-            const char *link_parameters = format_cstring("/NOLOGO /OUT:%s/%s.lib %s", artifacts_directory, build->name, all_objects);
+            //fprintf(stderr, "%s is a Module \n", build->name);
+            char *link_parameters = format_cstring("/NOLOGO /OUT:%s/%s.lib %s", context->artifacts_directory, build->name, all_objects);
 
             fprintf(stderr, "+ lib.exe %s\n", link_parameters);
             win32_wait_for_command(
@@ -178,7 +212,8 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
             free(link_parameters);
 
         } else if (build->kind == Build_Kind_Executable) {
-            const char *link_parameters = format_cstring("-o %s/%s.exe %s", artifacts_directory, build->name, all_objects);
+            //fprintf(stderr, "%s is an Executable \n", build->name);
+            char *link_parameters = format_cstring("-o %s/%s.exe %s", context->artifacts_directory, build->name, all_objects);
 
             fprintf(stderr, "+ clang.exe %s\n", link_parameters);
             win32_wait_for_command("clang.exe", link_parameters);
@@ -189,6 +224,6 @@ void link_objects(struct Build *build, const char *artifacts_directory) {
     }
 }
 
-void add_dependency(struct Build *module, struct Build *dependency) {
+void add_dependency(struct Build *module, struct Build dependency) {
     module->dependencies[module->dependencies_count++] = dependency;
 }
