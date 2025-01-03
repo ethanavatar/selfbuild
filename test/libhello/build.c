@@ -11,12 +11,17 @@ extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
 struct Build build(struct Build_Context *context) {
 
-    static char *hello_files[] = { "hello.c" };
+    static char *hello_files[] = { "src/hello.c" };
+    static char *includes[]    = { "src" };
     static struct Build lib = {
-        .name = "hello",
         .kind = Build_Kind_Module,
-        .source_files = hello_files,
-        .source_files_count = sizeof(hello_files) / sizeof(char *),
+        .name = "hello",
+
+        .sources       = hello_files,
+        .sources_count = sizeof(hello_files) / sizeof(char *),
+
+        .includes           = includes,
+        .includes_count = sizeof(includes) / sizeof(char *),
     };
 
     return lib;
@@ -31,10 +36,11 @@ int main(void) {
     // - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea
     // - https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathcanonicalizea
     if (!win32_dir_exists(artifacts_directory)) CreateDirectory(artifacts_directory, NULL);
-    bootstrap("build.c", "build.exe", "bin/build.old");
+    bootstrap("build.c", "build.exe", "bin/build.old", "../..");
 
     struct Build_Context context = {
         .artifacts_directory = artifacts_directory,
+        .self_build_path = "../.."
         //.current_directory = "" // @TODO
     };
 

@@ -97,13 +97,19 @@ bool should_recompile(const char *source_file_path, const char *object_file_path
     return source_file_time > object_file_time;
 }
 
-void bootstrap(const char *build_script_path, const char *executable_path, const char *old_executable_path) {
+void bootstrap(
+    const char *build_script_path,
+    const char *executable_path,
+    const char *old_executable_path,
+    const char *self_build_path
+) {
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");
         MoveFileEx(executable_path, old_executable_path, MOVEFILE_REPLACE_EXISTING);
 
         char arguments[64] = { 0 };
-        sprintf(arguments, "%s -o %s -std=c23", build_script_path, executable_path);
+        sprintf(arguments, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
+        fprintf(stderr, "+ clang.exe %s", arguments);
 
         int rebuild_success = win32_wait_for_command("clang.exe", arguments);
         if (rebuild_success == 0) {
@@ -113,6 +119,65 @@ void bootstrap(const char *build_script_path, const char *executable_path, const
             MoveFileA("bin/build.old", "build.exe");
         }
     }
+}
+
+void win32_create_directories(const char *path) {
+    char temp[MAX_PATH];
+    char *p = NULL;
+    size_t len;
+    snprintf(temp, sizeof(temp), "%s", path);
+    len = strlen(temp);
+    if (temp[len - 1] == '/') {
+        temp[len - 1] = '\0';
+    }
+
+    for (p = temp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            CreateDirectory(temp, NULL);
+            *p = '/';
+        }
+    }
+
+    CreateDirectory(temp, NULL);
+}
+
+struct Build build_submodule(struct Build_Context *context, char *module_directory) {
+    char *build_script_path = format_cstring("%s/build.c", module_directory);
+    //fprintf(stderr, "script path: %s", build_script_path);
+    assert(win32_file_exists(build_script_path));
+
+    char *module_artifacts_path = format_cstring("%s/%s", context->artifacts_directory, module_directory);
+    if (!win32_dir_exists(module_artifacts_path)) {
+        win32_create_directories(module_artifacts_path);
+    }
+
+    char *module_dll_path = format_cstring("%s/build.dll", module_artifacts_path);
+    char *parameters = format_cstring(
+        "%s -I%s -std=c23 -shared -fPIC -o %s",
+        build_script_path,
+        context->self_build_path,
+        module_dll_path
+    );
+    win32_wait_for_command("clang.exe", parameters);
+    free(parameters);
+
+    HMODULE build_module = LoadLibraryA(module_dll_path);
+    assert(build_module && "failed to load module");
+    free(module_dll_path);
+    free(module_artifacts_path);
+
+    Build_Function build_function = (Build_Function) GetProcAddress(build_module, "build");
+
+    struct Build_Context submodule_context = { 0 };
+    memcpy(&submodule_context, context, sizeof(struct Build_Context));
+
+    submodule_context.current_directory = module_directory;
+
+    struct Build module_definition = build_function(&submodule_context);
+    module_definition.root_dir = module_directory;
+
+    return module_definition;
 }
 
 size_t build_module(struct Build_Context *context, struct Build *build) {
@@ -129,17 +194,30 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         memcpy(&includes[includes_length], include, strlen(include));
         includes_length += strlen(include);
         free(include);
+
+        for (size_t i = 0; i < module->includes_count; ++i) {
+            include = format_cstring("-I%s ", module->includes[i]);
+            memcpy(&includes[includes_length], include, strlen(include));
+            includes_length += strlen(include);
+            free(include);
+        }
     }
 
+    for (size_t i = 0; i < build->includes_count; ++i) {
+        char *include = format_cstring("-I%s ", build->includes[i]);
+        memcpy(&includes[includes_length], include, strlen(include));
+        includes_length += strlen(include);
+        free(include);
+    }
 
     size_t compiled_count = 0;
-    for (size_t i = 0; i < build->source_files_count; ++i) {
-        char *source_file_path = format_cstring("%s/%s", build->root_dir, build->source_files[i]);
+    for (size_t i = 0; i < build->sources_count; ++i) {
+        char *source_file_path = format_cstring("%s/%s", build->root_dir, build->sources[i]);
         char *object_file_path = format_cstring("%s/%s.o", context->artifacts_directory, source_file_path);
 
-        char *dir = NULL;
+        char dir[MAX_PATH];
         _splitpath(object_file_path, NULL, dir, NULL, NULL);
-        if (!win32_dir_exists(dir)) CreateDirectory(dir, NULL);
+        if (!win32_dir_exists(dir)) win32_create_directories(dir);
 
         // @Bug: This does not handle the case where a file doesnt exist.
         // It just treats it like it doesnt need to be recompiled
@@ -170,7 +248,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         size_t top = 0;
         char all_objects[255] = { 0 };
 
-        for (size_t i = 0; i < build->source_files_count; ++i) {
+        for (size_t i = 0; i < build->sources_count; ++i) {
             // I wish I could do something like this. Maybe I can?
             // printf("%s, %s!", { "Hello", "World" }, 2);
 
@@ -178,8 +256,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
                 "%s/%s/%s.o ",
                 context->artifacts_directory,
                 build->root_dir,
-                build->source_files[i]
+                build->sources[i]
             );
+
             memcpy(&all_objects[top], object_file_path, strlen(object_file_path));
             top += strlen(object_file_path);
             free(object_file_path);
