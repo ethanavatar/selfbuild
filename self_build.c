@@ -25,7 +25,7 @@ void bootstrap(
 
         char arguments[64] = { 0 };
         sprintf(arguments, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
-        fprintf(stderr, "+ clang.exe %s", arguments);
+        fprintf(stderr, "+ clang.exe %s\n", arguments);
 
         int rebuild_success = win32_wait_for_command("clang.exe", arguments);
         if (rebuild_success == 0) {

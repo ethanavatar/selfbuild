@@ -7,6 +7,16 @@
 #include "win32_platform.h"
 #include "strings.h"
 
+char *win32_get_current_directory(void) {
+    char cwd[MAX_PATH] = { 0 };
+    DWORD bytes_written = GetCurrentDirectory(MAX_PATH, cwd);
+    
+    char *result = calloc(bytes_written + 1, sizeof(char));
+    memcpy(result, cwd, bytes_written + 1);
+
+    return result;
+}
+
 void win32_move_file(const char *source, const char *destination, enum File_Move_Flags flags) {
     MoveFileEx(source, destination, flags);
 }

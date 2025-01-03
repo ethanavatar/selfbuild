@@ -2,8 +2,6 @@
 #include <stddef.h>
 #include <assert.h>
 
-#include <windows.h>
-
 #define SELF_BUILD_C
 #include "self_build.h"
 
@@ -48,8 +46,7 @@ int main(void) {
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     bootstrap("build.c", "build.exe", "bin/build.old", "..");
 
-    char cwd[MAX_PATH] = { 0 };
-    DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
+    char *cwd = win32_get_current_directory();
 
     struct Build_Context context = {
         .artifacts_directory = artifacts_directory,
@@ -62,5 +59,6 @@ int main(void) {
 
     build_module(&context, &module);
 
+    free(cwd);
     return 0;
 }

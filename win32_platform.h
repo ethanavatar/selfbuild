@@ -9,6 +9,8 @@ enum File_Move_Flags {
 void *win32_load_library(const char *);
 void *win32_get_symbol_address(void *, const char *);
 
+char *win32_get_current_directory(void);
+
 void      win32_move_file(const char *, const char *, enum File_Move_Flags);
 bool      win32_dir_exists(const char *);
 bool      win32_file_exists(const char *);
