@@ -7,33 +7,39 @@
 #define SELF_BUILD_C
 #include "self_build.h"
 
+#include "win32_platform.h"
+#include "win32_platform.c"
+
+#include "strings.h"
+#include "strings.c"
+
 extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
 struct Build build(struct Build_Context *context) {
 
-    struct Build libhello = build_submodule(context, "libhello");
+    static char *main_files[] = {
+        "self_build.c",
+        "win32_platform.c",
+        "strings.c"
+    };
 
-    static char *main_files[] = { "main.c" };
-    static char *includes[]   = { "libhello/src" };
     static struct Build exe = {
-        .kind = Build_Kind_Executable,
-        .name = "main",
+        .kind = Build_Kind_Module,
+        .name = "self_build",
 
         .sources        = main_files,
         .sources_count  = sizeof(main_files) / sizeof(char *),
 
-        .includes       = includes,
-        .includes_count = sizeof(includes) / sizeof(char *)
+        .includes       = NULL,
+        .includes_count = 0,
     };
-
-    exe.dependencies = calloc(8, sizeof(struct Build));
-    add_dependency(&exe, libhello);
 
     return exe;
 }
 
 int main(void) {
     char *artifacts_directory = "bin";
+    char *self_build_path     = ".";
 
     // @TODO: Canonical paths
     // @Refs:
@@ -48,7 +54,7 @@ int main(void) {
     struct Build_Context context = {
         .artifacts_directory = artifacts_directory,
         .current_directory   = cwd,
-        .self_build_path     = ".."
+        .self_build_path     = self_build_path,
     };
 
     struct Build module = build(&context);

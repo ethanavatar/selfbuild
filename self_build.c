@@ -1,95 +1,12 @@
 #include <stddef.h>
-#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
-#include <windows.h>
-#include <shlwapi.h>
-
-// @Note: Interesting read
-// https://stackoverflow.com/questions/52537188/format-strings-safely-when-vsnprintf-is-not-available
-char *format_cstring(const char *format, ...) {
-    char *result = NULL;
-    va_list args;
-    va_start(args, format);
-
-    int size = vsnprintf(NULL, 0, format, args);
-    if (size > 0) {
-        result = calloc(size + 1, sizeof(char));
-        memset(result, 0, size + 1);
-        vsnprintf(result, size + 1, format, args);
-    }
-
-    va_end(args);
-    return result;
-}
-
-// https://stackoverflow.com/a/6218957
-bool win32_dir_exists(const char *path) {
-    DWORD attributes = GetFileAttributes(path);
-    return (attributes != INVALID_FILE_ATTRIBUTES) &&
-           (attributes &  FILE_ATTRIBUTE_DIRECTORY);
-}
-
-bool win32_file_exists(const char *path) {
-    DWORD attributes = GetFileAttributes(path);
-    return (attributes != INVALID_FILE_ATTRIBUTES) &&
-           (attributes &  FILE_ATTRIBUTE_DIRECTORY) == 0;
-}
-
-long long win32_get_file_last_modified_time(const char *path) {
-    long long last_modified_time = 0;
-
-    HANDLE source_fh = CreateFile(
-        path,
-        GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL, NULL
-    );
-
-    if (source_fh != INVALID_HANDLE_VALUE) {
-        FILETIME ft = { 0 };
-        assert(GetFileTime(source_fh, NULL, NULL, &ft));
-        CloseHandle(source_fh);
-
-        ULARGE_INTEGER lv_Large;
-        lv_Large.LowPart  = ft.dwLowDateTime;
-        lv_Large.HighPart = ft.dwHighDateTime;
-        last_modified_time = lv_Large.QuadPart;
-    }
-
-    return last_modified_time;
-}
-
-int win32_wait_for_command(const char *path, const char *parameters) {
-    char *command = format_cstring("%s %s", path, parameters);
-
-    STARTUPINFO startup_info = { 0 };
-    startup_info.cb         = sizeof(startup_info);
-    startup_info.dwFlags    = STARTF_USESTDHANDLES;
-    startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
-    startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    startup_info.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-
-    char cwd[MAX_PATH] = { 0 };
-    DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
-
-    PROCESS_INFORMATION process_info = { 0 };
-    CreateProcessA(
-        NULL,
-        command,
-        NULL, NULL, true, 0, NULL,
-        cwd,
-        &startup_info,
-        &process_info
-    );
-    WaitForSingleObject(process_info.hProcess, INFINITE);
-
-    DWORD exit_code;
-    GetExitCodeProcess(process_info.hProcess, &exit_code);
-
-    CloseHandle(process_info.hProcess);
-    free(command);
-    return exit_code;
-}
+#include "self_build.h"
+#include "win32_platform.h"
+#include "strings.h"
 
 bool should_recompile(const char *source_file_path, const char *object_file_path) {
     long long source_file_time = win32_get_file_last_modified_time(source_file_path);
@@ -99,13 +16,12 @@ bool should_recompile(const char *source_file_path, const char *object_file_path
 
 void bootstrap(
     const char *build_script_path,
-    const char *executable_path,
-    const char *old_executable_path,
+    const char *executable_path, const char *old_executable_path,
     const char *self_build_path
 ) {
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");
-        MoveFileEx(executable_path, old_executable_path, MOVEFILE_REPLACE_EXISTING);
+        win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
         char arguments[64] = { 0 };
         sprintf(arguments, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
@@ -116,30 +32,9 @@ void bootstrap(
             exit(win32_wait_for_command("build.exe", NULL));
 
         } else {
-            MoveFileA("bin/build.old", "build.exe");
+            win32_move_file("bin/build.old", "build.exe", File_Move_Flags_None);
         }
     }
-}
-
-void win32_create_directories(const char *path) {
-    char temp[MAX_PATH];
-    char *p = NULL;
-    size_t len;
-    snprintf(temp, sizeof(temp), "%s", path);
-    len = strlen(temp);
-    if (temp[len - 1] == '/') {
-        temp[len - 1] = '\0';
-    }
-
-    for (p = temp + 1; *p; p++) {
-        if (*p == '/') {
-            *p = '\0';
-            CreateDirectory(temp, NULL);
-            *p = '/';
-        }
-    }
-
-    CreateDirectory(temp, NULL);
 }
 
 struct Build build_submodule(struct Build_Context *context, char *module_directory) {
@@ -154,7 +49,7 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
 
     char *module_dll_path = format_cstring("%s/build.dll", module_artifacts_path);
     char *parameters = format_cstring(
-        "%s -I%s -std=c23 -shared -fPIC -o %s",
+        "%s -I%s -std=c23 -shared -fPIC -o %s -std=c23",
         build_script_path,
         context->self_build_path,
         module_dll_path
@@ -162,12 +57,12 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
     win32_wait_for_command("clang.exe", parameters);
     free(parameters);
 
-    HMODULE build_module = LoadLibraryA(module_dll_path);
+    void *build_module = win32_load_library(module_dll_path);
     assert(build_module && "failed to load module");
     free(module_dll_path);
     free(module_artifacts_path);
 
-    Build_Function build_function = (Build_Function) GetProcAddress(build_module, "build");
+    Build_Function build_function = (Build_Function) win32_get_symbol_address(build_module, "build");
 
     struct Build_Context submodule_context = { 0 };
     memcpy(&submodule_context, context, sizeof(struct Build_Context));
@@ -215,14 +110,14 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         char *source_file_path = format_cstring("%s/%s", build->root_dir, build->sources[i]);
         char *object_file_path = format_cstring("%s/%s.o", context->artifacts_directory, source_file_path);
 
-        char dir[MAX_PATH];
+        char dir[255] = { 0 };
         _splitpath(object_file_path, NULL, dir, NULL, NULL);
         if (!win32_dir_exists(dir)) win32_create_directories(dir);
 
         // @Bug: This does not handle the case where a file doesnt exist.
         // It just treats it like it doesnt need to be recompiled
         if (should_recompile(source_file_path, object_file_path)) {
-            char *parameters = format_cstring("-c %s -o %s %s", source_file_path, object_file_path, includes);
+            char *parameters = format_cstring("-c %s -o %s %s -std=c23", source_file_path, object_file_path, includes);
             fprintf(stderr, "+ clang.exe %s\n", parameters);
 
             // @TODO: Set working directory to be next to the root build script
@@ -292,7 +187,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
         } else if (build->kind == Build_Kind_Executable) {
             //fprintf(stderr, "%s is an Executable \n", build->name);
-            char *link_parameters = format_cstring("-o %s/%s.exe %s", context->artifacts_directory, build->name, all_objects);
+            char *link_parameters = format_cstring("-o %s/%s.exe %s -std=c23", context->artifacts_directory, build->name, all_objects);
 
             fprintf(stderr, "+ clang.exe %s\n", link_parameters);
             win32_wait_for_command("clang.exe", link_parameters);

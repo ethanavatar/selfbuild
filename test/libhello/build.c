@@ -17,10 +17,10 @@ struct Build build(struct Build_Context *context) {
         .kind = Build_Kind_Module,
         .name = "hello",
 
-        .sources       = hello_files,
-        .sources_count = sizeof(hello_files) / sizeof(char *),
+        .sources        = hello_files,
+        .sources_count  = sizeof(hello_files) / sizeof(char *),
 
-        .includes           = includes,
+        .includes       = includes,
         .includes_count = sizeof(includes) / sizeof(char *),
     };
 
@@ -32,10 +32,7 @@ int main(void) {
     char *artifacts_directory = "bin";
 
     // @TODO: Canonical paths
-    // @Refs:
-    // - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea
-    // - https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathcanonicalizea
-    if (!win32_dir_exists(artifacts_directory)) CreateDirectory(artifacts_directory, NULL);
+    if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     bootstrap("build.c", "build.exe", "bin/build.old", "../..");
 
     struct Build_Context context = {

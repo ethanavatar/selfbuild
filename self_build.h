@@ -3,11 +3,6 @@
 
 char *format_cstring(const char *, ...);
 
-bool      win32_dir_exists(const char *);
-bool      win32_file_exists(const char *);
-long long win32_get_file_last_modified_time(const char *);
-int       win32_wait_for_command(const char *, const char *);
-
 enum Build_Kind {
     Build_Kind_Module,
     Build_Kind_Executable,
