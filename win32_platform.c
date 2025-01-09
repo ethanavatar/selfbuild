@@ -7,11 +7,13 @@
 #include "win32_platform.h"
 #include "strings.h"
 
-char *win32_get_current_directory(void) {
+#include "memory.h"
+
+char *win32_get_current_directory(struct Allocator *allocator) {
     char cwd[MAX_PATH] = { 0 };
     DWORD bytes_written = GetCurrentDirectory(MAX_PATH, cwd);
     
-    char *result = calloc(bytes_written + 1, sizeof(char));
+    char *result = allocator_allocate(allocator, sizeof(char) * (bytes_written + 1));
     memcpy(result, cwd, bytes_written + 1);
 
     return result;
@@ -65,8 +67,12 @@ long long win32_get_file_last_modified_time(const char *path) {
     return last_modified_time;
 }
 
-int win32_wait_for_command(const char *path, const char *parameters) {
-    char *command = format_cstring("%s %s", path, parameters);
+int win32_wait_for_command(
+    const char *path, const char *parameters,
+    struct Arena *scratch_arena
+) {
+    struct Allocator scratch_allocator = arena_allocator(scratch_arena);
+    char *command = format_cstring(&scratch_allocator, "%s %s", path, parameters);
 
     STARTUPINFO startup_info = { 0 };
     startup_info.cb         = sizeof(startup_info);
@@ -93,7 +99,8 @@ int win32_wait_for_command(const char *path, const char *parameters) {
     GetExitCodeProcess(process_info.hProcess, &exit_code);
 
     CloseHandle(process_info.hProcess);
-    free(command);
+    arena_clear(scratch_arena);
+
     return exit_code;
 }
 

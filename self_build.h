@@ -1,7 +1,7 @@
 #ifndef SELF_BUILD_H
 #define SELF_BUILD_H
 
-char *format_cstring(const char *, ...);
+#include "memory.h"
 
 enum Build_Kind {
     Build_Kind_Module,
@@ -30,6 +30,7 @@ struct Build_Context {
     char *artifacts_directory;
     char *current_directory;
     char *self_build_path;
+    struct Arena *scratch_arena;
 };
 
 typedef struct Build (*Build_Function)(struct Build_Context *);
@@ -38,6 +39,7 @@ struct Build build_submodule(struct Build_Context *, char *);
 
 bool should_recompile(const char *, const char *);
 void bootstrap(
+    struct Build_Context *,
     const char *build_script_path,
     const char *executable_path,
     const char *old_executable_path,
