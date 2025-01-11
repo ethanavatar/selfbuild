@@ -26,6 +26,9 @@
 #include "scratch_memory.h"
 #include "scratch_memory.c"
 
+#include "string_builder.h"
+#include "string_builder.c"
+
 extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
 struct Build build(struct Build_Context *context) {
@@ -38,7 +41,8 @@ struct Build build(struct Build_Context *context) {
         "allocators.c",
         "arena.c", "managed_arena.c",
         "thread_context.c",
-        "scratch_memory.c"
+        "scratch_memory.c",
+        "string_builder.c",
     };
 
     static struct Build exe = {

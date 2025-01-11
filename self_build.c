@@ -9,6 +9,7 @@
 #include "strings.h"
 #include "allocators.h"
 #include "arena.h"
+#include "string_builder.h"
 
 #include "scratch_memory.h"
 
@@ -23,15 +24,18 @@ void bootstrap(
     const char *executable_path, const char *old_executable_path,
     const char *self_build_path
 ) {
+    struct Allocator scratch = scratch_begin();
+    struct String_Builder sb = string_builder_create(&scratch, 0);
+
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");
         win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
-        char arguments[64] = { 0 };
-        sprintf(arguments, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
-        fprintf(stderr, "+ clang.exe %s\n", arguments);
+        string_builder_append(&sb, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
+        struct String_View arguments = string_builder_as_string(&sb);
+        fprintf(stderr, "+ clang.exe %.*s\n", (int) arguments.length, arguments.data);
 
-        int rebuild_success = win32_wait_for_command("clang.exe", arguments);
+        int rebuild_success = win32_wait_for_command("clang.exe", arguments.data);
         if (rebuild_success == 0) {
             exit(win32_wait_for_command("build.exe", NULL));
 
@@ -39,6 +43,8 @@ void bootstrap(
             win32_move_file("bin/build.old", "build.exe", File_Move_Flags_None);
         }
     }
+
+    scratch_end(&scratch);
 }
 
 struct Build build_submodule(struct Build_Context *context, char *module_directory) {
