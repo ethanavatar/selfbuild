@@ -12,6 +12,9 @@ struct Managed_Arena {
     size_t committed_bytes;
 
     size_t high_water_bytes;
+
+    size_t return_stack[255];
+    size_t return_stack_count;
 };
 
 intptr_t align_backward(intptr_t, intptr_t);

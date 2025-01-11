@@ -141,9 +141,10 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 }
 
 void link_objects(struct Build_Context *context, struct Build *build) {
-    struct Allocator scratch = scratch_begin();
 
     if (build->should_recompile) {
+
+        struct Allocator scratch = scratch_begin();
 
         size_t top = 0;
         char all_objects[255] = { 0 };
@@ -196,9 +197,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
             fprintf(stderr, "+ clang.exe %s\n", link_parameters);
             win32_wait_for_command("clang.exe", link_parameters);
         }
-    }
 
-    scratch_end(&scratch);
+        scratch_end(&scratch);
+    }
 }
 
 void add_dependency(struct Build *module, struct Build dependency) {
