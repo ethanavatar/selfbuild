@@ -11,8 +11,20 @@
 #include "strings.h"
 #include "strings.c"
 
-#include "memory.h"
-#include "memory.c"
+#include "allocators.h"
+#include "allocators.c"
+
+#include "arena.h"
+#include "arena.c"
+
+#include "thread_context.h"
+#include "thread_context.c"
+
+#include "managed_arena.h"
+#include "managed_arena.c"
+
+#include "scratch_memory.h"
+#include "scratch_memory.c"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
@@ -22,7 +34,11 @@ struct Build build(struct Build_Context *context) {
         "self_build.c",
         "win32_platform.c",
         "strings.c",
-        "memory.c"
+
+        "allocators.c",
+        "arena.c", "managed_arena.c",
+        "thread_context.c",
+        "scratch_memory.c"
     };
 
     static struct Build exe = {
@@ -40,36 +56,38 @@ struct Build build(struct Build_Context *context) {
 }
 
 int main(void) {
+    struct Thread_Context tctx;
+    thread_context_init_and_equip(&tctx);
+
+    struct Allocator scratch = scratch_begin();
+
     char *artifacts_directory = "bin";
     char *self_build_path     = ".";
-
-    unsigned char *temp_memory      = calloc(1024, sizeof(unsigned char));
-    struct Arena temp_arena         = arena_create(temp_memory, 1024);
-    struct Allocator temp_allocator = arena_allocator(&temp_arena);
 
     // @TODO: Canonical paths
     // @Refs:
     // - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea
     // - https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathcanonicalizea
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
-    char *cwd = win32_get_current_directory(&temp_allocator);
+    char *cwd = win32_get_current_directory(&scratch);
 
     struct Build_Context context = {
         .artifacts_directory = artifacts_directory,
         .current_directory   = cwd,
         .self_build_path     = self_build_path,
-        .scratch_arena       = &temp_arena,
     };
 
-    bootstrap(&context, "build.c", "build.exe", "bin/build.old", "..");
+    bootstrap("build.c", "build.exe", "bin/build.old", "..");
 
     struct Build module = build(&context);
     module.root_dir = ".";
 
     build_module(&context, &module);
-    
-    arena_print(&temp_arena);
+
+    managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");
 
+    scratch_end(&scratch);
+    thread_context_release();
     return 0;
 }

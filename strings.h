@@ -1,7 +1,7 @@
 #ifndef STRINGS_H
 #define STRINGS_H
 
-#include "memory.h"
+#include "allocators.h"
 
 char *format_cstring(struct Allocator *, const char *, ...);
 

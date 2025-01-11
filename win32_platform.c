@@ -7,7 +7,10 @@
 #include "win32_platform.h"
 #include "strings.h"
 
-#include "memory.h"
+#include "allocators.h"
+#include "arena.h"
+
+#include "scratch_memory.h"
 
 char *win32_get_current_directory(struct Allocator *allocator) {
     char cwd[MAX_PATH] = { 0 };
@@ -68,11 +71,10 @@ long long win32_get_file_last_modified_time(const char *path) {
 }
 
 int win32_wait_for_command(
-    const char *path, const char *parameters,
-    struct Arena *scratch_arena
+    const char *path, const char *parameters
 ) {
-    struct Allocator scratch_allocator = arena_allocator(scratch_arena);
-    char *command = format_cstring(&scratch_allocator, "%s %s", path, parameters);
+    struct Allocator scratch = scratch_begin();
+    char *command = format_cstring(&scratch, "%s %s", path, parameters);
 
     STARTUPINFO startup_info = { 0 };
     startup_info.cb         = sizeof(startup_info);
@@ -99,7 +101,7 @@ int win32_wait_for_command(
     GetExitCodeProcess(process_info.hProcess, &exit_code);
 
     CloseHandle(process_info.hProcess);
-    arena_clear(scratch_arena);
+    scratch_end(&scratch);
 
     return exit_code;
 }
