@@ -1,16 +1,16 @@
-#include <stddef.h>
+#include "self_build.h"
+
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
-#include "self_build.h"
-#include "win32_platform.h"
+#include "arena.h"
 #include "strings.h"
 #include "allocators.h"
-#include "arena.h"
+#include "win32_platform.h"
 #include "string_builder.h"
-
 #include "scratch_memory.h"
 
 bool should_recompile(const char *source_file_path, const char *object_file_path) {
@@ -67,9 +67,10 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
         win32_create_directories(module_artifacts_path);
     }
 
+    const char *module_dll_path = format_cstring(&scratch, "%s/build.dll", module_artifacts_path);
     win32_wait_for_command_format(
-        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s/build.dll -std=c23",
-        module_directory, context->self_build_path, module_artifacts_path
+        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s -std=c23",
+        module_directory, context->self_build_path, module_dll_path
     );
 
     void *build_module = win32_load_library(module_dll_path);
@@ -113,8 +114,10 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
     size_t compiled_count = 0;
     for (size_t i = 0; i < build->sources_count; ++i) {
-        char *source_file_path = format_cstring(&scratch, "%s/%s", build->root_dir, build->sources[i]);
-        char *object_file_path = format_cstring(&scratch, "%s/%s.o", context->artifacts_directory, source_file_path);
+        struct Allocator sources_scratch = scratch_begin();
+
+        char *source_file_path = format_cstring(&sources_scratch, "%s/%s", build->root_dir, build->sources[i]);
+        char *object_file_path = format_cstring(&sources_scratch, "%s/%s.o", context->artifacts_directory, source_file_path);
 
         char dir[255] = { 0 };
         _splitpath(object_file_path, NULL, dir, NULL, NULL);
@@ -123,17 +126,16 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         // @Bug: This does not handle the case where a file doesnt exist.
         // It just treats it like it doesnt need to be recompiled
         if (should_recompile(source_file_path, object_file_path)) {
-            char *parameters = format_cstring(
-                &scratch,
-                "-c %s -o %s %.*s -std=c23",
+
+            // @TODO: Set working directory to be next to the root build script
+            int exit_code = win32_wait_for_command_format(
+                "clang -c %s -o %s %.*s -std=c23",
                 source_file_path,
                 object_file_path,
                 (int) includes.length, includes.data
             );
-            fprintf(stderr, "+ clang.exe %s\n", parameters);
+            assert(exit_code == 0);
 
-            // @TODO: Set working directory to be next to the root build script
-            assert(win32_wait_for_command("clang.exe", parameters) == 0);
             build->should_recompile = true;
             compiled_count++;
 
@@ -141,6 +143,8 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
             fprintf(stderr, "skipping %s\n", source_file_path);
         }
+
+        scratch_end(&sources_scratch);
     }
 
     link_objects(context, build);
@@ -150,65 +154,45 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 }
 
 void link_objects(struct Build_Context *context, struct Build *build) {
-
-    if (build->should_recompile) {
-
-        struct Allocator scratch = scratch_begin();
-
-        size_t top = 0;
-        char all_objects[255] = { 0 };
-
-        for (size_t i = 0; i < build->sources_count; ++i) {
-            // I wish I could do something like this. Maybe I can?
-            // printf("%s, %s!", { "Hello", "World" }, 2);
-
-            char *object_file_path = format_cstring(
-                &scratch, 
-                "%s/%s/%s.o ",
-                context->artifacts_directory,
-                build->root_dir,
-                build->sources[i]
-            );
-
-            memcpy(&all_objects[top], object_file_path, strlen(object_file_path));
-            top += strlen(object_file_path);
-        }
-
-        for (size_t i = 0; i < build->dependencies_count; ++i) {
-
-            char *library_file_path = format_cstring(
-                &scratch, 
-                "%s/%s/%s.lib ",
-                context->artifacts_directory,
-                build->root_dir,
-                build->dependencies[i].name
-            );
-
-            memcpy(&all_objects[top], library_file_path, strlen(library_file_path));
-            top += strlen(library_file_path);
-        }
-
-        if (build->kind == Build_Kind_Module) {
-            //fprintf(stderr, "%s is a Module \n", build->name);
-            char *link_parameters = format_cstring(&scratch, "/NOLOGO /OUT:%s/%s.lib %s", context->artifacts_directory, build->name, all_objects);
-
-            fprintf(stderr, "+ lib.exe %s\n", link_parameters);
-            win32_wait_for_command(
-                // @TODO: find this path programatically
-                "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe",
-                link_parameters
-            );
-
-        } else if (build->kind == Build_Kind_Executable) {
-            //fprintf(stderr, "%s is an Executable \n", build->name);
-            char *link_parameters = format_cstring(&scratch, "-o %s/%s.exe %s -std=c23", context->artifacts_directory, build->name, all_objects);
-
-            fprintf(stderr, "+ clang.exe %s\n", link_parameters);
-            win32_wait_for_command("clang.exe", link_parameters);
-        }
-
-        scratch_end(&scratch);
+    if (!build->should_recompile) {
+        return;
     }
+
+    struct Allocator scratch = scratch_begin();
+    struct String_Builder sb = string_builder_create(&scratch, 0);
+
+    for (size_t i = 0; i < build->sources_count; ++i) {
+        string_builder_append(
+            &sb, "%s/%s/%s.o ",
+            context->artifacts_directory, build->root_dir, build->sources[i]
+        );
+    }
+
+    for (size_t i = 0; i < build->dependencies_count; ++i) {
+        string_builder_append(
+            &sb, "%s/%s/%s.lib ",
+            context->artifacts_directory, build->root_dir, build->dependencies[i].name
+        );
+    }
+
+    struct String objects = string_builder_to_string(&sb, &scratch);
+    string_builder_clear(&sb);
+
+    if (build->kind == Build_Kind_Module) {
+        win32_wait_for_command_format(
+            // @TODO: find this path programatically
+            "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe /NOLOGO /OUT:%s/%s.lib %.*s",
+            context->artifacts_directory, build->name, (int) objects.length, objects.data
+        );
+
+    } else if (build->kind == Build_Kind_Executable) {
+        win32_wait_for_command_format(
+            "clang -o %s/%s.exe %.*s -std=c23",
+            context->artifacts_directory, build->name, (int) objects.length, objects.data
+        );
+    }
+
+    scratch_end(&scratch);
 }
 
 void add_dependency(struct Build *module, struct Build dependency) {
