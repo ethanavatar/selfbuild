@@ -17,15 +17,11 @@ struct String_Builder string_builder_create(
     return b;
 }
 
-void string_builder_append(
+void string_builder_append_vargs(
     struct String_Builder *builder,
-    const char *format, ...
+    const char *format, va_list format_args
 ) {
-    va_list args;
-    va_start(args, format);
-    size_t extra_length = vsnprintf(NULL, 0, format, args);
-    va_end(args);
-
+    size_t extra_length = vsnprintf(NULL, 0, format, format_args);
     bool needs_resize = builder->length + (extra_length + 1) > builder->capacity;
 
     if (needs_resize) {
@@ -45,24 +41,43 @@ void string_builder_append(
         builder->capacity = new_capacity;
     }
 
-    va_start(args, format);
-    vsnprintf(builder->buffer + builder->length, extra_length + 1, format, args);
-    va_end(args);
+    vsnprintf(builder->buffer + builder->length, extra_length + 1, format, format_args);
 
     builder->length += extra_length;
     builder->buffer[builder->length] = '\0';
 }
 
+void string_builder_append(
+    struct String_Builder *builder,
+    const char *format, ...
+) {
+    va_list format_args;
+    va_start(format_args, format);
+    string_builder_append_vargs(builder, format, format_args);
+    va_end(format_args);
+}
+
 void string_builder_clear(struct String_Builder *builder) {
     builder->length    = 0;
-    builder->buffer[0] = '\0';
+    if (builder->buffer) {
+        builder->buffer[0] = '\0';
+    }
 }
+
+void string_builder_destroy(struct String_Builder *builder) {
+    allocator_release(builder->allocator, builder->buffer);
+    builder->buffer = NULL;
+    builder->length = 0;
+    builder->capacity = 0;
+}
+
+static char *EMPTY_CSTRING = "";
 
 struct String_View string_builder_as_string(struct String_Builder *builder) {
     if (builder->buffer == NULL) {
         // @TODO: Better errors
         return (struct String_View) {
-            .data   = NULL,
+            .data   = EMPTY_CSTRING,
             .length = 0,
         };
     }
@@ -73,9 +88,22 @@ struct String_View string_builder_as_string(struct String_Builder *builder) {
     };
 }
 
-void string_builder_destroy(struct String_Builder *builder) {
-    allocator_release(builder->allocator, builder->buffer);
-    builder->buffer = NULL;
-    builder->length = 0;
-    builder->capacity = 0;
+struct String string_builder_to_string(struct String_Builder *builder, struct Allocator *allocator) {
+    if (builder->buffer == NULL) {
+        // @TODO: Better errors
+        return (struct String) {
+            .data   = EMPTY_CSTRING,
+            .length = 0,
+        };
+    }
+
+    // @TODO: My own memcpy
+    char *cloned_buffer = allocator_allocate(allocator, builder->length + 1);
+    memcpy(cloned_buffer, builder->buffer, builder->length + 1);
+
+    return (struct String) {
+        .data   = cloned_buffer,
+        .length = builder->length,
+    };
 }
+

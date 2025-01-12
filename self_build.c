@@ -25,48 +25,52 @@ void bootstrap(
     const char *self_build_path
 ) {
     struct Allocator scratch = scratch_begin();
-    struct String_Builder sb = string_builder_create(&scratch, 0);
+
+    bool should_exit = false;
+    int  exit_code   = 0;
 
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");
         win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
-        string_builder_append(&sb, "%s -o %s -std=c23 -I%s", build_script_path, executable_path, self_build_path);
-        struct String_View arguments = string_builder_as_string(&sb);
-        fprintf(stderr, "+ clang.exe %.*s\n", (int) arguments.length, arguments.data);
+        int rebuild_success = win32_wait_for_command_format(
+            "clang %s -o %s -std=c23 -I%s",
+            build_script_path, executable_path, self_build_path
+        );
 
-        int rebuild_success = win32_wait_for_command("clang.exe", arguments.data);
         if (rebuild_success == 0) {
-            exit(win32_wait_for_command("build.exe", NULL));
+            should_exit = true;
+            exit_code = win32_wait_for_command_ex("build.exe");
 
         } else {
-            win32_move_file("bin/build.old", "build.exe", File_Move_Flags_None);
+            win32_move_file(old_executable_path, executable_path, File_Move_Flags_None);
         }
     }
 
     scratch_end(&scratch);
+
+    if (should_exit) {
+        exit(exit_code);
+    }
 }
 
 struct Build build_submodule(struct Build_Context *context, char *module_directory) {
     struct Allocator scratch = scratch_begin();
 
-    char *build_script_path = format_cstring(&scratch, "%s/build.c", module_directory);
-    assert(win32_file_exists(build_script_path));
+    char *module_artifacts_path = format_cstring(
+        &scratch,
+        "%s/%s",
+        context->artifacts_directory, module_directory
+    );
 
-    char *module_artifacts_path = format_cstring(&scratch, "%s/%s", context->artifacts_directory, module_directory);
     if (!win32_dir_exists(module_artifacts_path)) {
         win32_create_directories(module_artifacts_path);
     }
 
-    char *module_dll_path = format_cstring(&scratch, "%s/build.dll", module_artifacts_path);
-    char *parameters = format_cstring(
-        &scratch, 
-        "%s -I%s -std=c23 -shared -fPIC -o %s -std=c23",
-        build_script_path,
-        context->self_build_path,
-        module_dll_path
+    win32_wait_for_command_format(
+        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s/build.dll -std=c23",
+        module_directory, context->self_build_path, module_artifacts_path
     );
-    win32_wait_for_command("clang.exe", parameters);
 
     void *build_module = win32_load_library(module_dll_path);
     assert(build_module && "failed to load module");
@@ -75,7 +79,6 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
 
     struct Build_Context submodule_context = { 0 };
     memcpy(&submodule_context, context, sizeof(struct Build_Context));
-
     submodule_context.current_directory = module_directory;
 
     struct Build module_definition = build_function(&submodule_context);
@@ -87,32 +90,26 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
 
 size_t build_module(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin();
-
-    // @TODO: resizable arrays
-    size_t includes_length = 0;
-    char includes[256] = { 0 };
+    struct String_Builder sb = string_builder_create(&scratch, 0);
 
     for (size_t dep = 0; dep < build->dependencies_count; ++dep) {
         struct Build *module = &build->dependencies[dep];
         size_t compiled = build_module(context, module);
         build->should_recompile = compiled > 0;
 
-        char *include = format_cstring(&scratch, "-I%s ", module->root_dir);
-        memcpy(&includes[includes_length], include, strlen(include));
-        includes_length += strlen(include);
+        string_builder_append(&sb, "-I%s ", module->root_dir);
 
         for (size_t i = 0; i < module->includes_count; ++i) {
-            include = format_cstring(&scratch, "-I%s ", module->includes[i]);
-            memcpy(&includes[includes_length], include, strlen(include));
-            includes_length += strlen(include);
+            string_builder_append(&sb, "-I%s ", module->includes[i]);
         }
     }
 
     for (size_t i = 0; i < build->includes_count; ++i) {
-        char *include = format_cstring(&scratch, "-I%s ", build->includes[i]);
-        memcpy(&includes[includes_length], include, strlen(include));
-        includes_length += strlen(include);
+        string_builder_append(&sb, "-I%s ", build->includes[i]);
     }
+
+    struct String includes = string_builder_to_string(&sb, &scratch);
+    string_builder_clear(&sb);
 
     size_t compiled_count = 0;
     for (size_t i = 0; i < build->sources_count; ++i) {
@@ -126,7 +123,13 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         // @Bug: This does not handle the case where a file doesnt exist.
         // It just treats it like it doesnt need to be recompiled
         if (should_recompile(source_file_path, object_file_path)) {
-            char *parameters = format_cstring(&scratch, "-c %s -o %s %s -std=c23", source_file_path, object_file_path, includes);
+            char *parameters = format_cstring(
+                &scratch,
+                "-c %s -o %s %.*s -std=c23",
+                source_file_path,
+                object_file_path,
+                (int) includes.length, includes.data
+            );
             fprintf(stderr, "+ clang.exe %s\n", parameters);
 
             // @TODO: Set working directory to be next to the root build script

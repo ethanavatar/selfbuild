@@ -8,7 +8,8 @@ struct Thread_Context {
 };
 
 void thread_context_init_and_equip(struct Thread_Context *);
-struct Thread_Context *thread_context_get(void);
 void thread_context_release(void);
+
+struct Thread_Context *thread_context_get(void);
 
 #endif // THREAD_CONTEXT_H

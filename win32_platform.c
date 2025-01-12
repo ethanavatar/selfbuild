@@ -11,6 +11,7 @@
 #include "arena.h"
 
 #include "scratch_memory.h"
+#include "string_builder.h"
 
 char *win32_get_current_directory(struct Allocator *allocator) {
     char cwd[MAX_PATH] = { 0 };
@@ -75,7 +76,13 @@ int win32_wait_for_command(
 ) {
     struct Allocator scratch = scratch_begin();
     char *command = format_cstring(&scratch, "%s %s", path, parameters);
+    int exit_code = win32_wait_for_command_ex(command);
+    scratch_end(&scratch);
 
+    return exit_code;
+}
+
+int win32_wait_for_command_ex(char *command) {
     STARTUPINFO startup_info = { 0 };
     startup_info.cb         = sizeof(startup_info);
     startup_info.dwFlags    = STARTF_USESTDHANDLES;
@@ -101,8 +108,23 @@ int win32_wait_for_command(
     GetExitCodeProcess(process_info.hProcess, &exit_code);
 
     CloseHandle(process_info.hProcess);
-    scratch_end(&scratch);
+    return exit_code;
+}
 
+int win32_wait_for_command_format(const char *format, ...) {
+    struct Allocator scratch = scratch_begin();
+    struct String_Builder sb = string_builder_create(&scratch, 0);
+
+    va_list format_args;
+    va_start(format_args, format);
+    string_builder_append_vargs(&sb, format, format_args);
+    va_end(format_args);
+
+    struct String_View command = string_builder_as_string(&sb);
+    fprintf(stderr, "+ %.*s\n", (int) command.length, command.data);
+    int exit_code = win32_wait_for_command_ex(command.data);
+
+    scratch_end(&scratch);
     return exit_code;
 }
 

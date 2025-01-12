@@ -75,7 +75,7 @@ int main(void) {
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     char *cwd = win32_get_current_directory(&scratch);
 
-    bootstrap("build.c", "build.exe", "bin/build.old", "..");
+    bootstrap("build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Context context = {
         .artifacts_directory = artifacts_directory,
