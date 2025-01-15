@@ -4,14 +4,14 @@
 #include <windows.h>
 #include <shlwapi.h>
 
-#include "win32_platform.h"
-#include "strings.h"
+#include "stdlib/win32_platform.h"
+#include "stdlib/strings.h"
 
-#include "allocators.h"
-#include "arena.h"
+#include "stdlib/allocators.h"
+#include "stdlib/arena.h"
 
-#include "scratch_memory.h"
-#include "string_builder.h"
+#include "stdlib/scratch_memory.h"
+#include "stdlib/string_builder.h"
 
 char *win32_get_current_directory(struct Allocator *allocator) {
     char cwd[MAX_PATH] = { 0 };

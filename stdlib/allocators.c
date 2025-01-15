@@ -1,6 +1,7 @@
+#include "allocators.h"
+
 #include <stdio.h>
 #include <assert.h>
-#include "allocators.h"
 
 void *allocator_allocate(struct Allocator *allocator, size_t size) {
     void *result = NULL;

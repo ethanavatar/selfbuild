@@ -1,4 +1,4 @@
-#include "self_build.h"
+#include "self_build/self_build.h"
 
 #include <stdio.h>
 #include <stddef.h>
@@ -6,12 +6,12 @@
 #include <string.h>
 #include <assert.h>
 
-#include "arena.h"
-#include "strings.h"
-#include "allocators.h"
-#include "win32_platform.h"
-#include "string_builder.h"
-#include "scratch_memory.h"
+#include "stdlib/arena.h"
+#include "stdlib/strings.h"
+#include "stdlib/allocators.h"
+#include "stdlib/win32_platform.h"
+#include "stdlib/string_builder.h"
+#include "stdlib/scratch_memory.h"
 
 bool should_recompile(const char *source_file_path, const char *object_file_path) {
     long long source_file_time = win32_get_file_last_modified_time(source_file_path);
@@ -34,7 +34,7 @@ void bootstrap(
         win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
         int rebuild_success = win32_wait_for_command_format(
-            "clang %s -o %s -std=c23 -I%s",
+            "clang %s -o %s -std=c23 -I%s -O0 -g",
             build_script_path, executable_path, self_build_path
         );
 

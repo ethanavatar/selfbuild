@@ -1,7 +1,14 @@
 #ifndef SELF_BUILD_H
 #define SELF_BUILD_H
 
-#include "allocators.h"
+#include "stdlib/win32_platform.h"
+#include "stdlib/strings.h"
+#include "stdlib/allocators.h"
+#include "stdlib/arena.h"
+#include "stdlib/thread_context.h"
+#include "stdlib/managed_arena.h"
+#include "stdlib/scratch_memory.h"
+#include "stdlib/string_builder.h"
 
 enum Build_Kind {
     Build_Kind_Module,
@@ -35,6 +42,7 @@ struct Build_Context {
 typedef struct Build (*Build_Function)(struct Build_Context *);
 
 struct Build build_submodule(struct Build_Context *, char *);
+size_t build_module(struct Build_Context *, struct Build *);
 
 bool should_recompile(const char *, const char *);
 void bootstrap(
@@ -49,8 +57,3 @@ size_t build_source_files(struct Build_Context *, struct Build *);
 void   link_objects(struct Build_Context *, struct Build *);
 
 #endif // SELF_BUILD_H
-
-#ifdef SELF_BUILD_C
-#undef SELF_BUILD_C
-#include "self_build.c"
-#endif // SELF_BUILD_C

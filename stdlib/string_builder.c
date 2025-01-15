@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "string_builder.h"
-
-#include "allocators.h"
+#include "stdlib/string_builder.h"
+#include "stdlib/allocators.h"
 
 struct String_Builder string_builder_create(
     struct Allocator *allocator,
