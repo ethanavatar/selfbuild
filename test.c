@@ -115,17 +115,37 @@ bool window_should_close(struct Window window) {
     return window.state->should_close;
 }
 
+// @Cleaning: In raylib, the `begin` calls accept parameters,
+// and the `end` calls just operate with whatever the `begin` call was given.
+// So if `begin` receives a window, that window should be the one that is used by `end`.
+// What could be useful in this scenario is a hashmap on the thread context to store arbitrary global data.
+static thread_local struct Window *currently_drawing_window = NULL;
+
+void draw_begin(struct Window *window) {
+    currently_drawing_window = window;
+}
+
+void draw_end(void) {
+    struct Window *window = currently_drawing_window;
+
+    MSG msg = { 0 };
+    if (PeekMessageA(&msg, window->handle, 0, 0, PM_REMOVE)) {
+        bool should_process = msg.message != WM_QUIT;
+        if (should_process) {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+    }
+
+    currently_drawing_window = NULL;
+}
+
 int main(void) {
     struct Window window = window_create(initial_width, initial_height, "Window Title");
 
     while (!window_should_close(window)) {
-        bool result = 0;
-        MSG msg = { 0 };
-        if (PeekMessageA(&msg, window.handle, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) break;
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
+        draw_begin(&window);
+        draw_end();
     }
 
     window_destroy(&window);
