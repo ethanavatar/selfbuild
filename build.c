@@ -18,7 +18,7 @@ extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
 struct Build build(struct Build_Context *context) {
 
-    static char *main_files[] = {
+    static char *files[] = {
         "self_build/self_build.c",
         "stdlib/win32_platform.c",
         "stdlib/strings.c",
@@ -30,20 +30,37 @@ struct Build build(struct Build_Context *context) {
         "stdlib/string_builder.c",
     };
 
-    static char *main_includes[] = { "." };
+    static char *includes[] = { "." };
 
-    static struct Build exe = {
+    static struct Build lib = {
         .kind = Build_Kind_Module,
         .name = "self_build",
 
-        .sources        = main_files,
-        .sources_count  = sizeof(main_files) / sizeof(char *),
+        .sources        = files,
+        .sources_count  = sizeof(files) / sizeof(char *),
 
-        .includes       = main_includes,
-        .includes_count = sizeof(main_includes) / sizeof(char *),
+        .includes       = includes,
+        .includes_count = sizeof(includes) / sizeof(char *),
     };
 
-    return exe;
+    return lib;
+}
+
+struct Build test(struct Build_Context *context) {
+    static char *test_files[]    = { "test.c" };
+    static char *test_includes[] = { "."      };
+    static struct Build test_exe = {
+        .kind = Build_Kind_Executable,
+        .name = "test",
+
+        .sources        = test_files,
+        .sources_count  = sizeof(test_files) / sizeof(char *),
+
+        .includes       = test_includes,
+        .includes_count = sizeof(test_includes) / sizeof(char *),
+    };
+
+    return test_exe;
 }
 
 int main(void) {
@@ -61,15 +78,20 @@ int main(void) {
     bootstrap("build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Context context = {
+        .self_build_path     = self_build_path,
         .artifacts_directory = artifacts_directory,
         .current_directory   = cwd,
-        .self_build_path     = self_build_path,
     };
 
     struct Build module = build(&context);
     module.root_dir = ".";
 
-    build_module(&context, &module);
+    struct Build test_exe = test(&context);
+    test_exe.root_dir = ".";
+    test_exe.dependencies = calloc(1, sizeof(struct Build));
+    add_dependency(&test_exe, module);
+
+    build_module(&context, &test_exe);
 
     managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");

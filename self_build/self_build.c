@@ -34,7 +34,7 @@ void bootstrap(
         win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
         int rebuild_success = win32_wait_for_command_format(
-            "clang %s -o %s -std=c23 -I%s -O0 -g",
+            "clang %s -o %s -std=c23 -I%s -O0 -g -gcodeview -Wl,--pdb=",
             build_script_path, executable_path, self_build_path
         );
 
@@ -69,7 +69,7 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
 
     const char *module_dll_path = format_cstring(&scratch, "%s/build.dll", module_artifacts_path);
     win32_wait_for_command_format(
-        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s -std=c23",
+        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s -std=c23 -g -gcodeview -Wl,--pdb=",
         module_directory, context->self_build_path, module_dll_path
     );
 
@@ -129,7 +129,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
             // @TODO: Set working directory to be next to the root build script
             int exit_code = win32_wait_for_command_format(
-                "clang -c %s -o %s %.*s -std=c23",
+                "clang -c %s -o %s %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
                 source_file_path,
                 object_file_path,
                 (int) includes.length, includes.data
@@ -187,7 +187,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
     } else if (build->kind == Build_Kind_Executable) {
         win32_wait_for_command_format(
-            "clang -o %s/%s.exe %.*s -std=c23",
+            "clang -o %s/%s.exe %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
             context->artifacts_directory, build->name, (int) objects.length, objects.data
         );
     }
