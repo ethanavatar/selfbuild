@@ -22,6 +22,9 @@ struct Build {
     char  **sources;
     size_t  sources_count;
 
+    char  **flags;
+    size_t  flags_count;
+
     char  **includes;
     size_t  includes_count;
 

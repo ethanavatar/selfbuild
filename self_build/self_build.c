@@ -175,6 +175,10 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
+    for (size_t i = 0; i < build->flags_count; ++i) {
+        string_builder_append(&sb, "%s ", build->flags[i]);
+    }
+
     struct String objects = string_builder_to_string(&sb, &scratch);
     string_builder_clear(&sb);
 
@@ -188,7 +192,8 @@ void link_objects(struct Build_Context *context, struct Build *build) {
     } else if (build->kind == Build_Kind_Executable) {
         win32_wait_for_command_format(
             "clang -o %s/%s.exe %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
-            context->artifacts_directory, build->name, (int) objects.length, objects.data
+            context->artifacts_directory, build->name,
+            (int) objects.length, objects.data
         );
     }
 

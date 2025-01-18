@@ -28,6 +28,8 @@ struct Build build(struct Build_Context *context) {
         "stdlib/thread_context.c",
         "stdlib/scratch_memory.c",
         "stdlib/string_builder.c",
+
+        "windowing/windowing_win32.c",
     };
 
     static char *includes[] = { "." };
@@ -49,12 +51,17 @@ struct Build build(struct Build_Context *context) {
 struct Build test(struct Build_Context *context) {
     static char *test_files[]    = { "test.c" };
     static char *test_includes[] = { "."      };
+    static char *flags[]         = { "-lgdi32", "-lopengl32", "-lwinmm" };
+
     static struct Build test_exe = {
         .kind = Build_Kind_Executable,
         .name = "test",
 
         .sources        = test_files,
         .sources_count  = sizeof(test_files) / sizeof(char *),
+
+        .flags = flags,
+        .flags_count = sizeof(flags) / sizeof(char *),
 
         .includes       = test_includes,
         .includes_count = sizeof(test_includes) / sizeof(char *),
