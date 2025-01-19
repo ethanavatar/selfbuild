@@ -1,4 +1,4 @@
-#include "self_build.h"
+#include "self_build/self_build.h"
 
 #include <stdio.h>
 #include <stddef.h>
@@ -6,12 +6,12 @@
 #include <string.h>
 #include <assert.h>
 
-#include "arena.h"
-#include "strings.h"
-#include "allocators.h"
-#include "win32_platform.h"
-#include "string_builder.h"
-#include "scratch_memory.h"
+#include "stdlib/arena.h"
+#include "stdlib/strings.h"
+#include "stdlib/allocators.h"
+#include "stdlib/win32_platform.h"
+#include "stdlib/string_builder.h"
+#include "stdlib/scratch_memory.h"
 
 bool should_recompile(const char *source_file_path, const char *object_file_path) {
     long long source_file_time = win32_get_file_last_modified_time(source_file_path);
@@ -34,7 +34,7 @@ void bootstrap(
         win32_move_file(executable_path, old_executable_path, File_Move_Flags_Overwrite);
 
         int rebuild_success = win32_wait_for_command_format(
-            "clang %s -o %s -std=c23 -I%s",
+            "clang %s -o %s -std=c23 -I%s -O0 -g -gcodeview -Wl,--pdb=",
             build_script_path, executable_path, self_build_path
         );
 
@@ -69,7 +69,7 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
 
     const char *module_dll_path = format_cstring(&scratch, "%s/build.dll", module_artifacts_path);
     win32_wait_for_command_format(
-        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s -std=c23",
+        "clang %s/build.c -I%s -std=c23 -shared -fPIC -o %s -std=c23 -g -gcodeview -Wl,--pdb=",
         module_directory, context->self_build_path, module_dll_path
     );
 
@@ -129,7 +129,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
             // @TODO: Set working directory to be next to the root build script
             int exit_code = win32_wait_for_command_format(
-                "clang -c %s -o %s %.*s -std=c23",
+                "clang -c %s -o %s %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
                 source_file_path,
                 object_file_path,
                 (int) includes.length, includes.data
@@ -175,6 +175,10 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
+    for (size_t i = 0; i < build->flags_count; ++i) {
+        string_builder_append(&sb, "%s ", build->flags[i]);
+    }
+
     struct String objects = string_builder_to_string(&sb, &scratch);
     string_builder_clear(&sb);
 
@@ -187,8 +191,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
     } else if (build->kind == Build_Kind_Executable) {
         win32_wait_for_command_format(
-            "clang -o %s/%s.exe %.*s -std=c23",
-            context->artifacts_directory, build->name, (int) objects.length, objects.data
+            "clang -o %s/%s.exe %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
+            context->artifacts_directory, build->name,
+            (int) objects.length, objects.data
         );
     }
 

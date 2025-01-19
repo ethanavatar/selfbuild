@@ -1,12 +1,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "thread_context.h"
-#include "win32_platform.h"
+
+#include "stdlib/thread_context.h"
+#include "stdlib/win32_platform.h"
 
 #include <windows.h>
 
-#include "managed_arena.h"
+#include "stdlib/managed_arena.h"
 
 thread_local struct Thread_Context *thread_local_context = NULL;
 

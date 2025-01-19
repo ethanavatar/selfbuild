@@ -1,8 +1,9 @@
+#include "stdlib/arena.h"
+
 #include <stdio.h>
 #include <assert.h>
 
-#include "arena.h"
-#include "allocators.h"
+#include "stdlib/allocators.h"
 
 struct Arena arena_create(unsigned char *memory, size_t capacity_bytes) {
     return (struct Arena) {

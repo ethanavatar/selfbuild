@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "win32_platform.h"
-#include "managed_arena.h"
-#include "memory.h"
+#include "stdlib/win32_platform.h"
+#include "stdlib/managed_arena.h"
+#include "stdlib/memory.h"
 
 #include <windows.h>
 

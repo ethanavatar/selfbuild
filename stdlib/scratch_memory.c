@@ -1,8 +1,8 @@
 #include <stdio.h>
-#include "scratch_memory.h"
 
-#include "thread_context.h"
-#include "managed_arena.h"
+#include "stdlib/scratch_memory.h"
+#include "stdlib/thread_context.h"
+#include "stdlib/managed_arena.h"
 
 struct Allocator scratch_begin(void) {
     struct Thread_Context *tctx  = thread_context_get();

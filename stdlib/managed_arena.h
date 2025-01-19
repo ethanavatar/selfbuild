@@ -1,8 +1,8 @@
 #ifndef MANAGED_ARENA_H
 #define MANAGED_ARENA_H
 
-#include "stddef.h"
-#include "stdint.h"
+#include <stddef.h>
+#include <stdint.h>
 
 struct Managed_Arena {
     void  *memory;

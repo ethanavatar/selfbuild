@@ -2,61 +2,72 @@
 #include <stddef.h>
 #include <assert.h>
 
-#define SELF_BUILD_C
-#include "self_build.h"
+#include "self_build/self_build.h"
+#include "self_build/self_build.c"
 
-#include "win32_platform.h"
-#include "win32_platform.c"
-
-#include "strings.h"
-#include "strings.c"
-
-#include "allocators.h"
-#include "allocators.c"
-
-#include "arena.h"
-#include "arena.c"
-
-#include "thread_context.h"
-#include "thread_context.c"
-
-#include "managed_arena.h"
-#include "managed_arena.c"
-
-#include "scratch_memory.h"
-#include "scratch_memory.c"
-
-#include "string_builder.h"
-#include "string_builder.c"
+#include "stdlib/win32_platform.c"
+#include "stdlib/strings.c"
+#include "stdlib/allocators.c"
+#include "stdlib/arena.c"
+#include "stdlib/thread_context.c"
+#include "stdlib/managed_arena.c"
+#include "stdlib/scratch_memory.c"
+#include "stdlib/string_builder.c"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *);
 
 struct Build build(struct Build_Context *context) {
 
-    static char *main_files[] = {
-        "self_build.c",
-        "win32_platform.c",
-        "strings.c",
+    static char *files[] = {
+        "self_build/self_build.c",
+        "stdlib/win32_platform.c",
+        "stdlib/strings.c",
 
-        "allocators.c",
-        "arena.c", "managed_arena.c",
-        "thread_context.c",
-        "scratch_memory.c",
-        "string_builder.c",
+        "stdlib/allocators.c",
+        "stdlib/arena.c", "stdlib/managed_arena.c",
+        "stdlib/thread_context.c",
+        "stdlib/scratch_memory.c",
+        "stdlib/string_builder.c",
+
+        "windowing/windowing_win32.c",
     };
 
-    static struct Build exe = {
+    static char *includes[] = { "." };
+
+    static struct Build lib = {
         .kind = Build_Kind_Module,
         .name = "self_build",
 
-        .sources        = main_files,
-        .sources_count  = sizeof(main_files) / sizeof(char *),
+        .sources        = files,
+        .sources_count  = sizeof(files) / sizeof(char *),
 
-        .includes       = NULL,
-        .includes_count = 0,
+        .includes       = includes,
+        .includes_count = sizeof(includes) / sizeof(char *),
     };
 
-    return exe;
+    return lib;
+}
+
+struct Build test(struct Build_Context *context) {
+    static char *test_files[]    = { "test.c" };
+    static char *test_includes[] = { "."      };
+    static char *flags[]         = { "-lgdi32", "-lopengl32", "-lwinmm" };
+
+    static struct Build test_exe = {
+        .kind = Build_Kind_Executable,
+        .name = "test",
+
+        .sources        = test_files,
+        .sources_count  = sizeof(test_files) / sizeof(char *),
+
+        .flags = flags,
+        .flags_count = sizeof(flags) / sizeof(char *),
+
+        .includes       = test_includes,
+        .includes_count = sizeof(test_includes) / sizeof(char *),
+    };
+
+    return test_exe;
 }
 
 int main(void) {
@@ -68,25 +79,26 @@ int main(void) {
     char *artifacts_directory = "bin";
     char *self_build_path     = ".";
 
-    // @TODO: Canonical paths
-    // @Refs:
-    // - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea
-    // - https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathcanonicalizea
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     char *cwd = win32_get_current_directory(&scratch);
-
+    
     bootstrap("build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Context context = {
+        .self_build_path     = self_build_path,
         .artifacts_directory = artifacts_directory,
         .current_directory   = cwd,
-        .self_build_path     = self_build_path,
     };
 
     struct Build module = build(&context);
     module.root_dir = ".";
 
-    build_module(&context, &module);
+    struct Build test_exe = test(&context);
+    test_exe.root_dir = ".";
+    test_exe.dependencies = calloc(1, sizeof(struct Build));
+    add_dependency(&test_exe, module);
+
+    build_module(&context, &test_exe);
 
     managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");
