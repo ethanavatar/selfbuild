@@ -129,7 +129,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
             // @TODO: Set working directory to be next to the root build script
             int exit_code = win32_wait_for_command_format(
-                "clang -c %s -o %s %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
+                "clang -c %s -o %s %.*s -std=c23 -g -gcodeview",
                 source_file_path,
                 object_file_path,
                 (int) includes.length, includes.data
@@ -187,7 +187,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
     if (build->kind == Build_Kind_Module) {
         win32_wait_for_command_format(
             // @TODO: find this path programatically
-            "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe /NOLOGO /OUT:%s/%s.lib %.*s",
+            "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe /NOLOGO /OUT:%s/%s.lib %.*s /DEBUG:FULL",
             context->artifacts_directory, build->name, (int) objects.length, objects.data
         );
 

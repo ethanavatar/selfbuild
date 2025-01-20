@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <assert.h>
+
 #include <gl/gl.h>
 #include "gl/wglext.h"
 
@@ -16,15 +18,20 @@ static PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
         NULL, NULL, instance, &dummy_state
     );
 
+    assert(window);
+
     HDC device_context = GetDC(window);
-    PIXELFORMATDESCRIPTOR pixel_format_descriptor = {
+    assert(device_context);
+
+    const PIXELFORMATDESCRIPTOR pixel_format_descriptor = {
         .nSize = sizeof(PIXELFORMATDESCRIPTOR),
         .nVersion = 1,
         .dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
         .iPixelType = PFD_TYPE_RGBA,
 
         .cColorBits = 32,
-        //.cDepthBits = 24,
+        .cAlphaBits = 8,
+        .cDepthBits = 24,
         .cStencilBits = 8,
         .cAuxBuffers = 0,
 
@@ -35,7 +42,6 @@ static PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
     SetPixelFormat(device_context, pixel_format, &pixel_format_descriptor);
 
     HGLRC rendering_context = wglCreateContext(device_context);
-
 
     wglMakeCurrent(device_context, rendering_context);
     wglChoosePixelFormatARB    = (PFNWGLCHOOSEPIXELFORMATARBPROC)    (void *) wglGetProcAddress("wglChoosePixelFormatARB");

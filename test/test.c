@@ -2,6 +2,13 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include <windows.h>
+
+#include "stdlib/allocators.h"
+#include "stdlib/thread_context.h"
+#include "stdlib/scratch_memory.h"
+#include "stdlib/file_io.h"
+
 #include "windowing/windowing.h"
 #include "windowing/drawing.h"
 
@@ -19,22 +26,12 @@ static float vertices[] = {
      0.0f,  0.5f, 0.0f
 };
 
-static const char *vertexShaderSource =
-    "#version 460 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "void main() {\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
-
-static const char *fragmentShaderSource =
-    "#version 460 core\n"
-    "out vec4 FragColor;\n"
-    "void main() {\n"
-    "    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\0";
-
-
 int main(void) {
+
+    struct Thread_Context tctx;
+    thread_context_init_and_equip(&tctx);
+
+    struct Allocator persistent = scratch_begin();
 
     struct OpenGL_Description opengl_description = {
         .profile = OpenGL_Profile_Core,
@@ -61,35 +58,49 @@ int main(void) {
 
     /// Shaders
 
+    struct Allocator shaders_scratch = scratch_begin();
     unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
+    {
+        struct File_Contents vertex_shader_source = file_read_to_end("test/vert.glsl", &shaders_scratch);
 
-    int success;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    assert(success);
+        vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertexShader, 1, &vertex_shader_source.contents, NULL);
+        glCompileShader(vertexShader);
+
+        int success;
+        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+        assert(success);
+    }
 
     unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
+    {
+        struct File_Contents fragment_shader_source = file_read_to_end("test/frag.glsl", &shaders_scratch);
 
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    assert(success);
+        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragmentShader, 1, &fragment_shader_source.contents, NULL);
+        glCompileShader(fragmentShader);
+
+        int success;
+        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+        assert(success);
+    }
 
     unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
+    {
+        shaderProgram = glCreateProgram();
 
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
 
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    assert(success);
+        int success;
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        assert(success);
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+    }
+    scratch_end(&shaders_scratch);
 
     /// Buffers
 
@@ -126,6 +137,9 @@ int main(void) {
     glDeleteProgram(shaderProgram);
 
     window_destroy(&window);
+
+    scratch_end(&persistent);
+    thread_context_release();
     return 0;
 }
 

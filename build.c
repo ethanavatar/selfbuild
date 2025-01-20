@@ -31,6 +31,7 @@ struct Build build(struct Build_Context *context) {
 
         "windowing/windowing_win32.c",
         "windowing/drawing.c",
+        "stdlib/file_io_win32.c"
     };
 
     static char *includes[] = { "." };
@@ -50,7 +51,7 @@ struct Build build(struct Build_Context *context) {
 }
 
 struct Build test(struct Build_Context *context) {
-    static char *test_files[]    = { "test.c" };
+    static char *test_files[]    = { "test/test.c" };
     static char *test_includes[] = { "."      };
     static char *flags[]         = {
         "-lgdi32", "-lopengl32", "-lwinmm",
