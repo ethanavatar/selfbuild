@@ -1,3 +1,6 @@
 [submodule "simple-opengl-loader"]
 	path = simple-opengl-loader
 	url = git@github.com:tsherif/simple-opengl-loader.git
+[submodule "stb"]
+	path = stb
+	url = git@github.com:nothings/stb.git
