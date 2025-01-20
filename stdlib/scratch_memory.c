@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 #include "stdlib/scratch_memory.h"
 #include "stdlib/thread_context.h"
@@ -6,8 +7,15 @@
 
 struct Allocator scratch_begin(void) {
     struct Thread_Context *tctx  = thread_context_get();
+    
+    if (tctx == NULL) {
+        // @TODO: Real error reporting
+        assert(false && "Thread context is null");
+    }
+
     struct Managed_Arena  *arena = &tctx->arena;
     arena->return_stack[arena->return_stack_count++] = arena->used_bytes;
+
     //fprintf(stderr, "snapshot at %zu\n", arena->used_bytes);
     return managed_arena_allocator(&tctx->arena);
 }

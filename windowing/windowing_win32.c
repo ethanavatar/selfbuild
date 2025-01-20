@@ -49,8 +49,10 @@ struct Window window_create(struct Window_Description description) {
         NULL, NULL, current_process_handle, w.state
     );
 
+    w.device_context = GetDC(w.handle);
+
     if (description.backend == Graphics_Backend_OpenGL) {
-        window_opengl_set_rendering_context(w.handle, opengl_pixel_format);
+        window_opengl_set_rendering_context(w.handle, w.device_context, opengl_pixel_format);
     }
 
     // https://stackoverflow.com/questions/11118443/why-we-need-to-call-updatewindow-following-showwindow#11119645
@@ -92,6 +94,9 @@ void window_draw_end(void) {
             DispatchMessageA(&msg);
         }
     }
+
+
+    SwapBuffers(currently_drawing_window->device_context);
 
     currently_drawing_window = NULL;
 }

@@ -51,9 +51,8 @@ static PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
 
 
 void window_opengl_set_rendering_context(
-    HWND window_handle, PIXELFORMATDESCRIPTOR pixel_format_descriptor
+    HWND window_handle, HDC device_context, PIXELFORMATDESCRIPTOR pixel_format_descriptor
 ) {
-    HDC device_context = GetDC(window_handle);
     int pixel_format = ChoosePixelFormat(device_context, &pixel_format_descriptor);
 
     const int wgl_pixel_attributes[] = {
@@ -86,3 +85,4 @@ void window_opengl_set_rendering_context(
     HGLRC rendering_context = wglCreateContextAttribsARB(device_context, 0, wgl_context_attributes);
     wglMakeCurrent(device_context, rendering_context);
 }
+

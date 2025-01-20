@@ -8,7 +8,9 @@ struct Window_State {
 };
 
 struct Window {
-    void *handle;
+    void *handle; // win32 HWND
+    void *device_context; // win32 HDC
+    
     struct Window_State *state;
 };
 

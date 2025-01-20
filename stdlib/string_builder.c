@@ -31,8 +31,8 @@ void string_builder_append_vargs(
         char *new_buffer = allocator_allocate(builder->allocator, new_capacity);
 
         if (builder->buffer) {
-            // @TODO: My own memcpy
-            memcpy(new_buffer, builder->buffer, builder->length);
+            // @TODO: My own memmove
+            memmove(new_buffer, builder->buffer, builder->length);
             allocator_release(builder->allocator, builder->buffer);
         }
 

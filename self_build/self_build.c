@@ -175,7 +175,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
+    fprintf(stderr, "flags count: %zu\n", build->flags_count);
     for (size_t i = 0; i < build->flags_count; ++i) {
+        fprintf(stderr, "flag: %s\n", build->flags[i]);
         string_builder_append(&sb, "%s ", build->flags[i]);
     }
 
