@@ -30,6 +30,7 @@ struct Build build(struct Build_Context *context) {
         "stdlib/string_builder.c",
 
         "windowing/windowing_win32.c",
+        "windowing/drawing.c",
     };
 
     static char *includes[] = { "." };
@@ -51,7 +52,10 @@ struct Build build(struct Build_Context *context) {
 struct Build test(struct Build_Context *context) {
     static char *test_files[]    = { "test.c" };
     static char *test_includes[] = { "."      };
-    static char *flags[]         = { "-lgdi32", "-lopengl32", "-lwinmm", "-fsanitize=address,undefined" };
+    static char *flags[]         = {
+        "-lgdi32", "-lopengl32", "-lwinmm",
+        //"-fsanitize=address,undefined"
+    };
 
     static struct Build test_exe = {
         .kind = Build_Kind_Executable,

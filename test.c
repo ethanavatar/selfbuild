@@ -1,63 +1,17 @@
+#include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
 
-#include "stdlib/thread_context.h"
 #include "windowing/windowing.h"
+#include "windowing/drawing.h"
 
-#include <windows.h>
-#include <wingdi.h>
-#include <gl/gl.h>
-#include <gl/wglext.h>
-
-#include "opengl_definitions.h"
+#define SOGL_MAJOR_VERSION 4
+#define SOGL_MINOR_VERSION 6
+#define SOGL_IMPLEMENTATION_WIN32
+#include "simple-opengl-loader/simple-opengl-loader.h"
 
 const int initial_width  = 800;
 const int initial_height = 600;
-
-typedef void (*Function_glShaderSource)    (unsigned int, unsigned int, const char **, const int *);
-typedef void (*Function_glGenBuffers)      (int, unsigned int *);
-typedef void (*Function_glBindBuffer)      (int, unsigned int);
-typedef void (*Function_glBufferData)      (int, intptr_t, const void *, int);
-typedef void (*Function_glCompileShader)   (unsigned int);
-typedef void (*Function_glAttachShader)    (unsigned int, unsigned int);
-typedef void (*Function_glLinkProgram)     (unsigned int);
-typedef void (*Function_glDeleteShader)    (unsigned int);
-typedef void (*Function_glGenVertexArrays) (int, unsigned int *);
-typedef void (*Function_glVertexAttribPointer)     (unsigned int, int, int, unsigned char, int, const void *);
-typedef void (*Function_glEnableVertexAttribArray) (unsigned int);
-typedef void (*Function_glUseProgram)      (unsigned int);
-typedef void (*Function_glBindVertexArray) (unsigned int);
-typedef void (*Function_glDeleteBuffers)   (int, const unsigned int *);
-typedef void (*Function_glDeleteProgram)   (unsigned int);
-typedef void (*Function_glGetShaderiv)     (unsigned int, int, int *);
-typedef void (*Function_glGetProgramiv)    (unsigned int, int, int *);
-typedef void (*Function_glDeleteVertexArrays) (int, const unsigned int *);
-
-typedef unsigned int (*Function_glCreateShader) (int);
-typedef unsigned int (*Function_glCreateProgram) (void);
-
-Function_glShaderSource    glShaderSource     = NULL;
-Function_glGenBuffers      glGenBuffers       = NULL;
-Function_glBindBuffer      glBindBuffer       = NULL;
-Function_glBufferData      glBufferData       = NULL;
-Function_glCreateShader    glCreateShader     = NULL;
-Function_glCompileShader   glCompileShader    = NULL;
-Function_glCreateProgram   glCreateProgram    = NULL;
-Function_glAttachShader    glAttachShader     = NULL;
-Function_glLinkProgram     glLinkProgram      = NULL;
-Function_glDeleteShader    glDeleteShader     = NULL;
-Function_glGenVertexArrays glGenVertexArrays  = NULL;
-Function_glVertexAttribPointer     glVertexAttribPointer  = NULL;
-Function_glEnableVertexAttribArray glEnableVertexAttribArray  = NULL;
-Function_glUseProgram      glUseProgram  = NULL;
-Function_glBindVertexArray glBindVertexArray  = NULL;
-Function_glDeleteBuffers   glDeleteBuffers  = NULL;
-Function_glDeleteProgram   glDeleteProgram  = NULL;
-Function_glGetShaderiv     glGetShaderiv  = NULL;
-Function_glGetProgramiv    glGetProgramiv  = NULL;
-Function_glDeleteVertexArrays glDeleteVertexArrays  = NULL;
-
-void load_opengl_functions(void);
 
 static float vertices[] = {
     -0.5f, -0.5f, 0.0f,
@@ -84,7 +38,7 @@ int main(void) {
 
     struct OpenGL_Description opengl_description = {
         .profile = OpenGL_Profile_Core,
-        .major_version = 4, .minor_version = 6,
+        .major_version = SOGL_MAJOR_VERSION, .minor_version = SOGL_MINOR_VERSION,
     };
 
     struct Window_Description window_description = {
@@ -96,7 +50,14 @@ int main(void) {
     };
 
     struct Window window = window_create(window_description);
-    load_opengl_functions();
+    if (!sogl_loadOpenGL()) {
+        const char **failures = sogl_getFailures();
+        int i = 1;
+        while (*failures) {
+            fprintf(stderr, "Failed to load function %s\n", *failures);
+            failures++;
+        }
+    }
 
     /// Shaders
 
@@ -146,12 +107,11 @@ int main(void) {
 
     glBindVertexArray(0);
 
+    glViewport(0, 0, initial_width, initial_height);
+
     while (!window_should_close(window)) {
         window_draw_begin(&window); {
-
-            glViewport(0, 0, initial_width, initial_height);
-            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            draw_background_clear((struct Color) { 0.2f, 0.3f, 0.3f, 1.0f });
 
             glUseProgram(shaderProgram);
             glBindVertexArray(vao);
@@ -169,25 +129,3 @@ int main(void) {
     return 0;
 }
 
-void load_opengl_functions(void) {
-    glShaderSource     = (void *) wglGetProcAddress("glShaderSource");
-    glGenBuffers       = (void *) wglGetProcAddress("glGenBuffers");
-    glBindBuffer       = (void *) wglGetProcAddress("glBindBuffer");
-    glBufferData       = (void *) wglGetProcAddress("glBufferData");
-    glCreateShader     = (void *) wglGetProcAddress("glCreateShader");
-    glCompileShader    = (void *) wglGetProcAddress("glCompileShader");
-    glCreateProgram    = (void *) wglGetProcAddress("glCreateProgram");
-    glAttachShader     = (void *) wglGetProcAddress("glAttachShader");
-    glLinkProgram      = (void *) wglGetProcAddress("glLinkProgram");
-    glDeleteShader     = (void *) wglGetProcAddress("glDeleteShader");
-    glGenVertexArrays  = (void *) wglGetProcAddress("glGenVertexArrays");
-    glVertexAttribPointer     = (void *) wglGetProcAddress("glVertexAttribPointer");
-    glEnableVertexAttribArray = (void *) wglGetProcAddress("glEnableVertexAttribArray");
-    glUseProgram       = (void *) wglGetProcAddress("glUseProgram");
-    glBindVertexArray  = (void *) wglGetProcAddress("glBindVertexArray");
-    glDeleteBuffers    = (void *) wglGetProcAddress("glDeleteBuffers");
-    glDeleteProgram    = (void *) wglGetProcAddress("glDeleteProgram");
-    glGetShaderiv      = (void *) wglGetProcAddress("glGetShaderiv");
-    glGetProgramiv     = (void *) wglGetProcAddress("glGetProgramiv");
-    glDeleteVertexArrays = (void *) wglGetProcAddress("glDeleteVertexArrays");
-}
