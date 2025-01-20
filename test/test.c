@@ -167,25 +167,6 @@ int main(void) {
 
     glViewport(0, 0, initial_width, initial_height);
 
-    /*
-    int triangle_color_uniform = glGetUniformLocation(shaderProgram, "triangle_color");
-    glUseProgram(shaderProgram);
-    glUniform4f(triangle_color_uniform,
-        0xF0 / 1.f,
-        0xF0 / 1.f,
-        0xCB / 1.f,
-        0xFF / 1.f
-    );
-    */
-
-    int texture_uniform = glGetUniformLocation(shaderProgram, "texture");
-    glUniform4f(texture_uniform,
-        0xF0 / 1.f,
-        0xF0 / 1.f,
-        0xCB / 1.f,
-        0xFF / 1.f
-    );
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_missing);
 
