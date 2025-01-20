@@ -52,7 +52,7 @@ struct Build build(struct Build_Context *context) {
 
 struct Build test(struct Build_Context *context) {
     static char *test_files[]    = { "test/test.c" };
-    static char *test_includes[] = { "."      };
+    static char *test_includes[] = { ".", "cglm/include" };
     static char *flags[]         = {
         "-lgdi32", "-lopengl32", "-lwinmm",
         //"-fsanitize=address,undefined"

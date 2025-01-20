@@ -69,8 +69,11 @@ void window_opengl_set_rendering_context(
         WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
         WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB,
         WGL_COLOR_BITS_ARB,     32,
-        //WGL_DEPTH_BITS_ARB,     24,
+        WGL_DEPTH_BITS_ARB,     24,
         WGL_STENCIL_BITS_ARB,   8,
+
+        // https://stackoverflow.com/questions/34907832/activating-multisample-on-opengl-win32
+        WGL_SAMPLES_ARB,        4,
         0
     };
 
