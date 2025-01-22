@@ -64,8 +64,11 @@ struct Window window_create(struct Window_Description description) {
 void window_destroy(struct Window *window) {
     if (window->handle) {
         DestroyWindow(window->handle);
-        free(window->state); // @libc
         window->handle = NULL;
+    }
+
+    if (window->state) {
+        free(window->state); // @libc
     }
 }
 

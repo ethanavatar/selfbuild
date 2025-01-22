@@ -26,6 +26,14 @@ static LRESULT CALLBACK window_proc(
     LRESULT result = 0;
     switch (msg) {
 
+    //case WM_KEYUP:
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN: {
+        unsigned int vk_code = wParam;
+        if (0) { }
+        else if (vk_code == VK_ESCAPE) { state->should_close = true; }
+    } break;
+
     case WM_DESTROY: {
         state->should_close = true;
         PostQuitMessage(0);

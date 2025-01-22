@@ -29,6 +29,7 @@ struct File_Contents file_read_to_end(
         unsigned long bytes_read = 0;
         result.contents = (char *) allocator_allocate(allocator, result.length + 1);
         result.is_valid = ReadFile(file_handle, result.contents, result.length + 1, &bytes_read, NULL);
+        result.contents[result.length] = 0;
     }
 
     if (!result.is_valid) {
