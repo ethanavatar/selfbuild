@@ -80,19 +80,32 @@ static struct Vertex vertices[] = {
 };
 
 static vec3 cube_positions[] = {
-    {  0.0f,  0.0f,  0.00f, }, 
-    {  2.0f,  5.0f, -15.0f, }, 
-    { -1.5f, -2.2f, -2.50f, },  
-    { -3.8f, -2.0f, -12.3f, },  
-    {  2.4f, -0.4f, -3.50f, },  
-    { -1.7f,  3.0f, -7.50f, },  
-    {  1.3f, -2.0f, -2.50f, },  
-    {  1.5f,  2.0f, -2.50f, }, 
-    {  1.5f,  0.2f, -1.50f, }, 
+    {  0.0f,  0.0f,  0.00f, },
+    {  2.0f,  5.0f, -15.0f, },
+    { -1.5f, -2.2f, -2.50f, },
+    { -3.8f, -2.0f, -12.3f, },
+    {  2.4f, -0.4f, -3.50f, },
+    { -1.7f,  3.0f, -7.50f, },
+    {  1.3f, -2.0f, -2.50f, },
+    {  1.5f,  2.0f, -2.50f, },
+    {  1.5f,  0.2f, -1.50f, },
     { -1.3f,  1.0f, -1.50f, },
 };
 
-unsigned int load_texture_from_image(const char *file_path) {
+struct Image {
+    int width, height, channels_count;
+    unsigned char *data;
+};
+
+static const struct Image texture_missing_image = {
+    .width = 2, .height = 2, .channels_count = 4,
+    .data  = (unsigned char[16]) {
+        0xFF, 0x00, 0xFF, 0xFF,   0x00, 0x00, 0x00, 0xFF,
+        0x00, 0x00, 0x00, 0xFF,   0xFF, 0x00, 0xFF, 0xFF,
+    },
+};
+
+unsigned int load_texture_from_image_file(const char *file_path, bool generate_mipmaps) {
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -107,13 +120,77 @@ unsigned int load_texture_from_image(const char *file_path) {
 
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        //glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         fprintf(stderr, "failed to load texture from: %s", file_path);
     }
 
+    if (data && generate_mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
     stbi_image_free(data);
     return texture;
+}
+
+unsigned int load_texture_from_image(struct Image image, bool generate_mipmaps) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    if (image.data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data);
+    }
+
+    if (image.data && generate_mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
+    return texture;
+}
+
+unsigned int shader_compile_from_file(
+    const char *path, GLenum shader_type,
+    struct Allocator *allocator
+) {
+    unsigned int shader_id;
+    struct File_Contents source = file_read_to_end(path, allocator);
+
+    shader_id = glCreateShader(shader_type);
+    glShaderSource(shader_id, 1, &source.contents, NULL);
+    glCompileShader(shader_id);
+
+    int success;
+    glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);
+    assert(success);
+
+    return shader_id;
+}
+
+unsigned int shader_program_compile_from_files(const char *vs_path, const char *fs_path) {
+    struct Allocator scratch = scratch_begin();
+    unsigned int vs_id = shader_compile_from_file(vs_path, GL_VERTEX_SHADER,   &scratch);
+    unsigned int fs_id = shader_compile_from_file(vs_path, GL_FRAGMENT_SHADER, &scratch);
+
+    unsigned int shader_program_id = glCreateProgram();
+
+    glAttachShader(shader_program_id, vs_id);
+    glAttachShader(shader_program_id, fs_id);
+    glLinkProgram(shader_program_id);
+
+    int success;
+    glGetProgramiv(shader_program_id, GL_LINK_STATUS, &success);
+    assert(success);
+
+    glDeleteShader(fs_id);
+    glDeleteShader(vs_id);
+
+    scratch_end(&scratch);
+    return shader_program_id;
 }
 
 int main(void) {
@@ -149,53 +226,11 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    unsigned int texture_missing = load_texture_from_image("test/assets/Texture_Missing.png");
+    unsigned int texture_missing = load_texture_from_image(texture_missing_image, false);
 
     /// Shaders
-
-    struct Allocator shaders_scratch = scratch_begin();
-    unsigned int vertexShader;
-    {
-        struct File_Contents vertex_shader_source = file_read_to_end("test/quad.vert", &shaders_scratch);
-
-        vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &vertex_shader_source.contents, NULL);
-        glCompileShader(vertexShader);
-
-        int success;
-        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-        assert(success);
-    }
-
-    unsigned int fragmentShader;
-    {
-        struct File_Contents fragment_shader_source = file_read_to_end("test/quad.frag", &shaders_scratch);
-
-        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &fragment_shader_source.contents, NULL);
-        glCompileShader(fragmentShader);
-
-        int success;
-        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-        assert(success);
-    }
-
-    unsigned int shaderProgram;
-    {
-        shaderProgram = glCreateProgram();
-
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
-        glLinkProgram(shaderProgram);
-
-        int success;
-        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-        assert(success);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-    }
-    scratch_end(&shaders_scratch);
+    
+    unsigned int shaderProgram = shader_program_compile_from_files("test/quad.vert", "test/quad.frag");
 
     /// Buffers
 
@@ -267,7 +302,6 @@ int main(void) {
 
                 glUniformMatrix4fv(view_uniform,       1, GL_FALSE, view[0]);
                 glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, projection[0]);
-
 
                 glBindVertexArray(vao); {
 
