@@ -4,11 +4,9 @@ layout (location = 1) in vec2 texture_coordinate;
 
 out vec2 frag_texture_coordinate;
 
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+uniform mat4 mvp;
 
 void main() {
-   gl_Position = projection * view * model * vec4(vertex_position, 1.0f);
+   gl_Position = mvp * vec4(vertex_position, 1.0f);
    frag_texture_coordinate = texture_coordinate;
 }
