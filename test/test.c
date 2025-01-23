@@ -44,7 +44,6 @@ struct Render_State {
 
 static struct Render_State render_state;
 
-
 struct Textured_Vertex { float x, y, z,   s, t; };
 static struct Textured_Vertex vertices[] = {
     { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 0.0f, },
@@ -245,19 +244,26 @@ int main(void) {
             draw_background_clear((struct Color) { 0.2f, 0.3f, 0.3f, 1.0f });
 
             struct Colored_Triangle *triangle = &render_state.render_batch[render_state.render_batch_count++];
-            triangle->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f };
-            triangle->vertices[1] = (struct Colored_Vertex) {  0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f };
-            triangle->vertices[2] = (struct Colored_Vertex) {  0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f };
+            triangle->vertices[0] = (struct Colored_Vertex) { -50.f, -50.f, 0.0f,   1.0f, 0.0f, 0.0f };
+            triangle->vertices[1] = (struct Colored_Vertex) {  50.f, -50.f, 0.0f,   0.0f, 1.0f, 0.0f };
+            triangle->vertices[2] = (struct Colored_Vertex) {  0.0f,  50.f, 0.0f,   0.0f, 0.0f, 1.0f };
 
             {
                 glUseProgram(batchProgram);
 
                 mat4 transform = GLM_MAT4_IDENTITY;
-                glm_translate(transform, (vec3) { -0.75f, 0.75f, 0.0f });
-                glm_scale(transform, (vec3) { 0.25f, 0.25f, 0.0f });
+                glm_translate(transform, (vec3) { -200.f, 200.f, 0.0f });
+                glm_scale(transform,     (vec3) { 1.f, 1.f, 1.f });
+
+                float left   = -initial_width  / 2.0f;
+                float right  =  initial_width  / 2.0f;
+                float top    = -initial_height / 2.0f;
+                float bottom =  initial_height / 2.0f;
 
                 mat4 projection = GLM_MAT4_IDENTITY;
-                //glm_ortho(glm_rad(45.0f), initial_width / (float) initial_height, 0.1f, 100.0f, projection);
+                glm_ortho(
+                    left, right, top, bottom, 0.0f, 1.0f, projection
+                );
 
                 glUniformMatrix4fv(batch_transform_uniform,  1, GL_FALSE, transform[0]);
                 glUniformMatrix4fv(batch_projection_uniform, 1, GL_FALSE, projection[0]);
@@ -293,7 +299,12 @@ int main(void) {
                 );
 
                 mat4 projection;
-                glm_perspective(glm_rad(45.0f), initial_width / (float) initial_height, 0.1f, 100.0f, projection);
+                glm_perspective(
+                    glm_rad(45.0f),
+                    initial_width / (float) initial_height,
+                    0.1f, 100.0f,
+                    projection
+                );
 
                 glUniformMatrix4fv(view_uniform,       1, GL_FALSE, view[0]);
                 glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, projection[0]);
