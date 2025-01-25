@@ -109,6 +109,10 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         string_builder_append(&sb, "-I%s ", build->includes[i]);
     }
 
+    for (size_t i = 0; i < build->compile_flags_count; ++i) {
+        string_builder_append(&sb, "%s ", build->compile_flags[i]);
+    }
+
     struct String includes = string_builder_to_string(&sb, &scratch);
     string_builder_clear(&sb);
 
@@ -129,7 +133,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
             // @TODO: Set working directory to be next to the root build script
             int exit_code = win32_wait_for_command_format(
-                "clang -c %s -o %s %.*s -std=c23 -g -gcodeview",
+                "clang -c %s -o %s %.*s -std=c23",
                 source_file_path,
                 object_file_path,
                 (int) includes.length, includes.data
@@ -151,6 +155,45 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
     scratch_end(&scratch);
     return compiled_count;
+}
+
+// @TODO: find this path programatically
+static const char *msvc_lib_path =
+    "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe";
+
+void link_static_library(struct Build_Context *, struct Build *, struct String *);
+void link_shared_library(struct Build_Context *, struct Build *, struct String *);
+void link_executable    (struct Build_Context *, struct Build *, struct String *);
+
+void link_one(struct Build_Context *context, struct Build *build, struct String *artifacts) {
+    static_assert(Build_Kind_COUNT == 3);
+    if (0) { }
+    else if (build->kind == Build_Kind_Static_Library) { link_static_library(context, build, artifacts); }
+    else if (build->kind == Build_Kind_Shared_Library) { link_shared_library(context, build, artifacts); }
+    else if (build->kind == Build_Kind_Executable)     { link_executable(context, build, artifacts);     }
+}
+
+void link_static_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
+    win32_wait_for_command_format(
+        "%s /NOLOGO /OUT:%s/%s.lib %.*s",
+        msvc_lib_path, context->artifacts_directory, build->name, (int) artifacts->length, artifacts->data
+    );
+}
+
+void link_shared_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
+    win32_wait_for_command_format(
+        "clang -o %s/%s.dll %.*s -std=c23 -shared -fPIC",
+        context->artifacts_directory, build->name,
+        (int) artifacts->length, artifacts->data
+    );
+}
+
+void link_executable(struct Build_Context *context, struct Build *build, struct String *artifacts) {
+    win32_wait_for_command_format(
+        "clang -o %s/%s.exe %.*s -std=c23",
+        context->artifacts_directory, build->name,
+        (int) artifacts->length, artifacts->data
+    );
 }
 
 void link_objects(struct Build_Context *context, struct Build *build) {
@@ -175,29 +218,16 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
-    fprintf(stderr, "flags count: %zu\n", build->flags_count);
-    for (size_t i = 0; i < build->flags_count; ++i) {
-        fprintf(stderr, "flag: %s\n", build->flags[i]);
-        string_builder_append(&sb, "%s ", build->flags[i]);
+    fprintf(stderr, "flags count: %zu\n", build->link_flags_count);
+    for (size_t i = 0; i < build->link_flags_count; ++i) {
+        fprintf(stderr, "flag: %s\n", build->link_flags[i]);
+        string_builder_append(&sb, "%s ", build->link_flags[i]);
     }
 
-    struct String objects = string_builder_to_string(&sb, &scratch);
+    struct String artifacts = string_builder_to_string(&sb, &scratch);
     string_builder_clear(&sb);
 
-    if (build->kind == Build_Kind_Module) {
-        win32_wait_for_command_format(
-            // @TODO: find this path programatically
-            "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe /NOLOGO /OUT:%s/%s.lib %.*s /DEBUG:FULL",
-            context->artifacts_directory, build->name, (int) objects.length, objects.data
-        );
-
-    } else if (build->kind == Build_Kind_Executable) {
-        win32_wait_for_command_format(
-            "clang -o %s/%s.exe %.*s -std=c23 -g -gcodeview -Wl,--pdb=",
-            context->artifacts_directory, build->name,
-            (int) objects.length, objects.data
-        );
-    }
+    link_one(context, build, &artifacts);
 
     scratch_end(&scratch);
 }

@@ -152,6 +152,7 @@ void draw_triangle(struct Vector2 v1, struct Vector2 v2, struct Vector2 v3, stru
     triangle->vertices[2] = (struct Colored_Vertex) { v3.x, v3.y, 0.0f,   color.r, color.g, color.b, color.a,   0, 0 };
 }
 
+/*
 static inline bool render_should_transform(void) {
     return render_state.transforms_count > 0;
 }
@@ -169,9 +170,11 @@ mat4 render_transform_pop(void) {
 void render_translate(vec3 translation) {
     glm_translate(render_state.current_matrix, translation);
 }
+*/
 
 void draw_cube(vec3 position) {
 
+    /*
     float x = position.x;
     float y = position.y;
     float z = position.z;
@@ -187,6 +190,7 @@ void draw_cube(vec3 position) {
             render_vertex_textured(half_width, half_height, half_length,   0, 0);
         render_end_geomentry();
     render_transform_pop();
+    */
 
     {
         struct Colored_Triangle *t11 = &render_state.render_batch[render_state.render_batch_count++];

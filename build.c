@@ -28,20 +28,27 @@ struct Build build(struct Build_Context *context) {
         "stdlib/thread_context.c",
         "stdlib/scratch_memory.c",
         "stdlib/string_builder.c",
+        "stdlib/file_io_win32.c",
 
         "windowing/windowing_win32.c",
         "windowing/drawing.c",
-        "stdlib/file_io_win32.c"
     };
 
     static char *includes[] = { "." };
 
+    static char *compile_flags[] = {
+        "-g", "-gcodeview",
+    };
+
     static struct Build lib = {
-        .kind = Build_Kind_Module,
+        .kind = Build_Kind_Static_Library,
         .name = "self_build",
 
         .sources        = files,
         .sources_count  = sizeof(files) / sizeof(char *),
+
+        .compile_flags       = compile_flags,
+        .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
 
         .includes       = includes,
         .includes_count = sizeof(includes) / sizeof(char *),
@@ -53,8 +60,14 @@ struct Build build(struct Build_Context *context) {
 struct Build test(struct Build_Context *context) {
     static char *test_files[]    = { "test/test.c" };
     static char *test_includes[] = { ".", "cglm/include" };
-    static char *flags[]         = {
+
+    static char *compile_flags[] = {
+        "-g", "-gcodeview",
+    };
+
+    static char *link_flags[] = {
         "-lgdi32", "-lopengl32", "-lwinmm",
+        "-g", "-gcodeview", "-Wl,--pdb=",
         //"-fsanitize=address,undefined"
     };
 
@@ -65,8 +78,11 @@ struct Build test(struct Build_Context *context) {
         .sources        = test_files,
         .sources_count  = sizeof(test_files) / sizeof(char *),
 
-        .flags = flags,
-        .flags_count = sizeof(flags) / sizeof(char *),
+        .compile_flags       = compile_flags,
+        .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
+
+        .link_flags       = link_flags,
+        .link_flags_count = sizeof(link_flags) / sizeof(char *),
 
         .includes       = test_includes,
         .includes_count = sizeof(test_includes) / sizeof(char *),
