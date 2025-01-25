@@ -178,7 +178,7 @@ void link_one(struct Build_Context *context, struct Build *build, struct String 
 
 void link_static_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
     win32_wait_for_command_format(
-        "%s /LIBPATH:%s /NOLOGO /OUT:%s/%s.lib %.*s",
+        "%s /LIBPATH:\"%s\" /NOLOGO /OUT:%s/%s.lib %.*s",
         msvc_lib_path, windows_sdk_path, context->artifacts_directory, build->name, (int) artifacts->length, artifacts->data
     );
 }
