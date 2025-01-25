@@ -49,6 +49,9 @@ void colored_vertex_bind_attributes(void) {
 }
 
 struct Render_State {
+    size_t transforms_count;
+    mat4 transforms[256];
+
     size_t render_batch_count;
     struct Colored_Triangle render_batch[1024];
 };
@@ -149,15 +152,41 @@ void draw_triangle(struct Vector2 v1, struct Vector2 v2, struct Vector2 v3, stru
     triangle->vertices[2] = (struct Colored_Vertex) { v3.x, v3.y, 0.0f,   color.r, color.g, color.b, color.a,   0, 0 };
 }
 
+static inline bool render_should_transform(void) {
+    return render_state.transforms_count > 0;
+}
+
+void render_transform_push(mat4 matrix_value) {
+    mat4 *m = &render_state.transforms[render_state.transforms_count++];
+    *m = matrix_value;
+    render_state.current_matrix = m;
+}
+
+mat4 render_transform_pop(void) {
+    return render_state.transforms[--render_state.transforms_count];
+}
+
+void render_translate(vec3 translation) {
+    glm_translate(render_state.current_matrix, translation);
+}
+
 void draw_cube(vec3 position) {
 
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+
     // https://github.com/raysan5/raylib/blob/7bfc8e8ca75882de434c601c4294ca1774b69278/src/rmodels.c#L257
-    render_matrix_push();
+    render_transform_push(GLM_MAT4_IDENTITY);
         render_translate(position);
-        render_begin_geometry(Geometry_Triangles);
-            render_vertex();
+        render_begin_geometry(GL_TRIANGLES);
+            float half_width  = width  / 2.f
+            float half_height = height / 2.f
+            float half_length = length / 2.f
+            render_vertex_textured(half_width, half_height, half_length,   0, 0);
+            render_vertex_textured(half_width, half_height, half_length,   0, 0);
         render_end_geomentry();
-    render_matrix_pop();
+    render_transform_pop();
 
     {
         struct Colored_Triangle *t11 = &render_state.render_batch[render_state.render_batch_count++];
