@@ -54,7 +54,10 @@ void bootstrap(
     }
 }
 
-struct Build build_submodule(struct Build_Context *context, char *module_directory) {
+struct Build build_submodule(
+    struct Build_Context *context, char *module_directory,
+    enum Build_Kind requested_kind
+) {
     struct Allocator scratch = scratch_begin();
 
     char *module_artifacts_path = format_cstring(
@@ -82,7 +85,7 @@ struct Build build_submodule(struct Build_Context *context, char *module_directo
     memcpy(&submodule_context, context, sizeof(struct Build_Context));
     submodule_context.current_directory = module_directory;
 
-    struct Build module_definition = build_function(&submodule_context);
+    struct Build module_definition = build_function(&submodule_context, requested_kind);
     module_definition.root_dir = module_directory;
 
     scratch_end(&scratch);
@@ -216,7 +219,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
     for (size_t i = 0; i < build->dependencies_count; ++i) {
         string_builder_append(
-            &sb, "%s/%s/%s.lib ",
+            &sb, "%s/%s/%s.dll ", // @Hack
             context->artifacts_directory, build->root_dir, build->dependencies[i].name
         );
     }

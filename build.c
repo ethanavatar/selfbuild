@@ -14,9 +14,9 @@
 #include "stdlib/scratch_memory.c"
 #include "stdlib/string_builder.c"
 
-extern struct Build __declspec(dllexport) build(struct Build_Context *);
+extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
 
-struct Build build(struct Build_Context *context) {
+struct Build build(struct Build_Context *context, enum Build_Kind kind) {
 
     static char *files[] = {
         "self_build/self_build.c",
@@ -41,7 +41,6 @@ struct Build build(struct Build_Context *context) {
     };
 
     static struct Build lib = {
-        .kind = Build_Kind_Static_Library,
         .name = "self_build",
 
         .sources        = files,
@@ -53,6 +52,8 @@ struct Build build(struct Build_Context *context) {
         .includes       = includes,
         .includes_count = sizeof(includes) / sizeof(char *),
     };
+
+    lib.kind = kind;
 
     return lib;
 }
@@ -111,7 +112,7 @@ int main(void) {
         .current_directory   = cwd,
     };
 
-    struct Build module = build(&context);
+    struct Build module = build(&context, Build_Kind_Static_Library);
     module.root_dir = ".";
 
     struct Build test_exe = test(&context);

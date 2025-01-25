@@ -47,9 +47,9 @@ struct Build_Context {
     char *self_build_path;
 };
 
-typedef struct Build (*Build_Function)(struct Build_Context *);
+typedef struct Build (*Build_Function)(struct Build_Context *, enum Build_Kind);
 
-struct Build build_submodule(struct Build_Context *, char *);
+struct Build build_submodule(struct Build_Context *, char *, enum Build_Kind);
 size_t build_module(struct Build_Context *, struct Build *);
 
 bool should_recompile(const char *, const char *);
