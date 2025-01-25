@@ -37,6 +37,17 @@ const int initial_height = 600;
 struct Colored_Vertex   { float x, y, z,    r, g, b, a,   s, t; };
 struct Colored_Triangle { struct Colored_Vertex vertices[3]; };
 
+void colored_vertex_bind_attributes(void) {
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) (3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) (7 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+}
+
 struct Render_State {
     size_t render_batch_count;
     struct Colored_Triangle render_batch[1024];
@@ -44,49 +55,48 @@ struct Render_State {
 
 static struct Render_State render_state;
 
-struct Textured_Vertex { float x, y, z,   s, t; };
-static struct Textured_Vertex vertices[] = {
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 0.0f, },
+static struct Colored_Vertex vertices[] = {
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
 
-    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
+    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
 
-    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
+    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
 
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
 
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x =  0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x = -0.5f, .y = -0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x = -0.5f, .y = -0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
 
-    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
-    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .s = 1.0f, .t = 1.0f, },
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .s = 1.0f, .t = 0.0f, },
-    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .s = 0.0f, .t = 0.0f, },
-    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .s = 0.0f, .t = 1.0f, },
+    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
+    { .x =  0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 1.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x =  0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 1.0f, .t = 0.0f, },
+    { .x = -0.5f, .y =  0.5f, .z =  0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 0.0f, },
+    { .x = -0.5f, .y =  0.5f, .z = -0.5f,   .r = 1.f, .g = 1.f, .b = 1.f,   .s = 0.0f, .t = 1.0f, },
 };
 
 static vec3 cube_positions[] = {
@@ -139,6 +149,84 @@ void draw_triangle(struct Vector2 v1, struct Vector2 v2, struct Vector2 v3, stru
     triangle->vertices[2] = (struct Colored_Vertex) { v3.x, v3.y, 0.0f,   color.r, color.g, color.b, color.a,   0, 0 };
 }
 
+void draw_cube(vec3 position) {
+
+    // https://github.com/raysan5/raylib/blob/7bfc8e8ca75882de434c601c4294ca1774b69278/src/rmodels.c#L257
+    render_matrix_push();
+        render_translate(position);
+        render_begin_geometry(Geometry_Triangles);
+            render_vertex();
+        render_end_geomentry();
+    render_matrix_pop();
+
+    {
+        struct Colored_Triangle *t11 = &render_state.render_batch[render_state.render_batch_count++];
+        t11->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  0.0f, 0.0f, };
+        t11->vertices[1] = (struct Colored_Vertex) {  0.5f, -0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  1.0f, 0.0f, };
+        t11->vertices[2] = (struct Colored_Vertex) {  0.5f,  0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  1.0f, 1.0f, };
+
+        struct Colored_Triangle *t12 = &render_state.render_batch[render_state.render_batch_count++];
+        t12->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  1.0f, 1.0f, };
+        t12->vertices[1] = (struct Colored_Vertex) { -0.5f,  0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  0.0f, 1.0f, };
+        t12->vertices[2] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f,  0.0f, 0.0f, };
+    }
+    {
+        struct Colored_Triangle *t21 = &render_state.render_batch[render_state.render_batch_count++];
+        t21->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, 0.5f,   1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+        t21->vertices[1] = (struct Colored_Vertex) {  0.5f, -0.5f, 0.5f,   1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+        t21->vertices[2] = (struct Colored_Vertex) {  0.5f,  0.5f, 0.5f,   1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+
+        struct Colored_Triangle *t22 = &render_state.render_batch[render_state.render_batch_count++];
+        t22->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+        t22->vertices[1] = (struct Colored_Vertex) { -0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+        t22->vertices[2] = (struct Colored_Vertex) { -0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+    }
+    {
+        struct Colored_Triangle *t31 = &render_state.render_batch[render_state.render_batch_count++];
+        t31->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+        t31->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+        t31->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+
+        struct Colored_Triangle *t32 = &render_state.render_batch[render_state.render_batch_count++];
+        t32->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+        t32->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+        t32->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+    }
+    {
+        struct Colored_Triangle *t41 = &render_state.render_batch[render_state.render_batch_count++];
+        t41->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+        t41->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+        t41->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+
+        struct Colored_Triangle *t42 = &render_state.render_batch[render_state.render_batch_count++];
+        t42->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+        t42->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+        t42->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+    }
+    {
+        struct Colored_Triangle *t51 = &render_state.render_batch[render_state.render_batch_count++];
+        t51->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+        t51->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+        t51->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+
+        struct Colored_Triangle *t52 = &render_state.render_batch[render_state.render_batch_count++];
+        t52->vertices[0] = (struct Colored_Vertex) {  0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+        t52->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+        t52->vertices[0] = (struct Colored_Vertex) { -0.5f, -0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+    }
+    {
+        struct Colored_Triangle *t61 = &render_state.render_batch[render_state.render_batch_count++];
+        t61->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+        t61->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 1.0f, };
+        t61->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+
+        struct Colored_Triangle *t62 = &render_state.render_batch[render_state.render_batch_count++];
+        t62->vertices[0] = (struct Colored_Vertex) {  0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   1.0f, 0.0f, };
+        t62->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f,  0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 0.0f, };
+        t62->vertices[0] = (struct Colored_Vertex) { -0.5f,  0.5f, -0.5f,  1.f, 1.f, 1.f, 1.f,   0.0f, 1.0f, };
+    }
+}
+
 int main(void) {
 
     struct Thread_Context tctx;
@@ -179,10 +267,9 @@ int main(void) {
 
     /// Shaders
     
-    unsigned int shaderProgram = shader_program_compile_from_files("test/quad.vert", "test/quad.frag");
-    unsigned int batchProgram  = shader_program_compile_from_files(
-        "test/colored_verts_2d.vert",
-        "test/colored_verts_2d.frag"
+    unsigned int shaderProgram = shader_program_compile_from_files(
+        "test/default.vert",
+        "test/default.frag"
     );
 
     /// Buffers
@@ -191,18 +278,13 @@ int main(void) {
     unsigned int vao, vbo;
     {
         glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
+        glBindVertexArray(vao); {
+            glGenBuffers(1, &vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+            colored_vertex_bind_attributes();
 
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-        glEnableVertexAttribArray(0);
-
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        glBindVertexArray(0);
+        } glBindVertexArray(0);
     }
 
     unsigned int batch_vao, batch_vbo;
@@ -212,15 +294,7 @@ int main(void) {
 
             glGenBuffers(1, &batch_vbo);
             glBindBuffer(GL_ARRAY_BUFFER, batch_vbo);
-
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) 0);
-            glEnableVertexAttribArray(0);
-
-            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) (3 * sizeof(float)));
-            glEnableVertexAttribArray(1);
-
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *) (7 * sizeof(float)));
-            glEnableVertexAttribArray(2);
+            colored_vertex_bind_attributes();
 
         } glBindVertexArray(0);
     }
@@ -232,11 +306,9 @@ int main(void) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_missing);
 
-    unsigned int mvp_uniform = glGetUniformLocation(shaderProgram, "mvp");
-
-    glUseProgram(batchProgram);
-
-    unsigned int batch_mvp_uniform = glGetUniformLocation(batchProgram, "mvp");
+    unsigned int model_uniform      = glGetUniformLocation(shaderProgram, "model");
+    unsigned int view_uniform       = glGetUniformLocation(shaderProgram, "view");
+    unsigned int projection_uniform = glGetUniformLocation(shaderProgram, "projection");
 
     double start_time_seconds = win32_get_system_timestamp() / 1e7;
 
@@ -246,6 +318,12 @@ int main(void) {
 
         window_draw_begin(&window); {
             draw_background_clear((struct Color) { 0.2f, 0.3f, 0.3f, 1.0f });
+
+            mat4 identity = GLM_MAT4_IDENTITY;
+
+            glUniformMatrix4fv(model_uniform,      1, GL_FALSE, identity[0]);
+            glUniformMatrix4fv(view_uniform,       1, GL_FALSE, identity[0]);
+            glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, identity[0]);
 
             draw_triangle(
                 (struct Vector2) {  0.f,  -25.f },
@@ -262,7 +340,7 @@ int main(void) {
             );
 
             {
-                glUseProgram(batchProgram);
+                glUseProgram(shaderProgram);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, texture_default);
 
@@ -274,7 +352,7 @@ int main(void) {
                     projection
                 );
 
-                glUniformMatrix4fv(batch_mvp_uniform,  1, GL_FALSE, projection[0]);
+                glUniformMatrix4fv(projection_uniform,  1, GL_FALSE, projection[0]);
 
                 glBindVertexArray(batch_vao); {
                     glBindBuffer(GL_ARRAY_BUFFER, batch_vbo);
@@ -322,18 +400,16 @@ int main(void) {
 
                     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+                    glUniformMatrix4fv(view_uniform,       1, GL_FALSE, view[0]);
+                    glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, projection[0]);
+
                     for (size_t i = 0; i < 10; i++) {
                         mat4 model = GLM_MAT4_IDENTITY;
                         glm_translate(model, cube_positions[i]);
                         float angle = 20.0f * i; 
                         glm_rotate(model, glm_rad(angle), (vec3) { 1.0f, 0.3f, 0.5f, });
 
-                        mat4 mvp = GLM_MAT4_IDENTITY;
-                        glm_mat4_mul(projection, view, mvp);
-                        glm_mat4_mul(mvp, model, mvp);
-
-                        glUniformMatrix4fv(mvp_uniform,  1, GL_FALSE, mvp[0]);
-
+                        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, model[0]);
                         glDrawArrays(GL_TRIANGLES, 0, 36);
                     }
 
