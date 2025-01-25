@@ -101,12 +101,12 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         string_builder_append(&sb, "-I%s ", module->root_dir);
 
         for (size_t i = 0; i < module->includes_count; ++i) {
-            string_builder_append(&sb, "-I%s ", module->includes[i]);
+            string_builder_append(&sb, "-I%s/%s ", module->root_dir, module->includes[i]);
         }
     }
 
     for (size_t i = 0; i < build->includes_count; ++i) {
-        string_builder_append(&sb, "-I%s ", build->includes[i]);
+        string_builder_append(&sb, "-I%s/%s ", build->root_dir, build->includes[i]);
     }
 
     for (size_t i = 0; i < build->compile_flags_count; ++i) {
@@ -161,6 +161,9 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 static const char *msvc_lib_path =
     "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx86/x86/lib.exe";
 
+static const char *windows_sdk_path =
+    "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x86";
+
 void link_static_library(struct Build_Context *, struct Build *, struct String *);
 void link_shared_library(struct Build_Context *, struct Build *, struct String *);
 void link_executable    (struct Build_Context *, struct Build *, struct String *);
@@ -175,8 +178,8 @@ void link_one(struct Build_Context *context, struct Build *build, struct String 
 
 void link_static_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
     win32_wait_for_command_format(
-        "%s /NOLOGO /OUT:%s/%s.lib %.*s",
-        msvc_lib_path, context->artifacts_directory, build->name, (int) artifacts->length, artifacts->data
+        "%s /LIBPATH:%s /NOLOGO /OUT:%s/%s.lib %.*s",
+        msvc_lib_path, windows_sdk_path, context->artifacts_directory, build->name, (int) artifacts->length, artifacts->data
     );
 }
 
