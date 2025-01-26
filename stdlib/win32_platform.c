@@ -27,8 +27,16 @@ void win32_move_file(const char *source, const char *destination, enum File_Move
     MoveFileEx(source, destination, flags);
 }
 
+void win32_copy_file(const char *source, const char *destination) {
+    CopyFileA((LPCSTR) source, (LPCSTR) destination, FALSE);
+}
+
 void *win32_load_library(const char *library) {
     return LoadLibraryA(library);
+}
+
+void win32_free_library(void *library) {
+    FreeLibrary((HMODULE) library);
 }
 
 void *win32_get_symbol_address(void *library, const char *symbol_name) {
