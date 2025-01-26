@@ -40,6 +40,17 @@ struct Build build(struct Build_Context *context, enum Build_Kind kind) {
         "-g", "-gcodeview",
     };
 
+    static char **link_flags       = { 0 };
+    static size_t link_flags_count = 0;
+
+    if (kind == Build_Kind_Shared_Library) {
+        link_flags_count = 3;
+        link_flags = calloc(3, sizeof(char *));
+        link_flags[0] = strdup("-lwinmm");
+        link_flags[1] = strdup("-lgdi32");
+        link_flags[2] = strdup("-lopengl32");
+    }
+
     static struct Build lib = {
         .name = "self_build",
 
@@ -54,6 +65,8 @@ struct Build build(struct Build_Context *context, enum Build_Kind kind) {
     };
 
     lib.kind = kind;
+    lib.link_flags = link_flags;
+    lib.link_flags_count = link_flags_count;
 
     return lib;
 }
