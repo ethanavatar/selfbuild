@@ -218,9 +218,20 @@ void link_objects(struct Build_Context *context, struct Build *build) {
     }
 
     for (size_t i = 0; i < build->dependencies_count; ++i) {
+        struct Build dependency = build->dependencies[i];
+        const char *extension = NULL;
+
+        static_assert(Build_Kind_COUNT == 3);
+        if (0) { }
+        else if (dependency.kind == Build_Kind_Static_Library) { extension = "lib"; }
+        else if (dependency.kind == Build_Kind_Shared_Library) { extension = "dll"; }
+        else if (dependency.kind == Build_Kind_Executable) {
+            assert(false && "cant link against an executable");
+        }
+
         string_builder_append(
-            &sb, "%s/%s/%s.dll ", // @Hack
-            context->artifacts_directory, build->root_dir, build->dependencies[i].name
+            &sb, "%s/%s/%s.%s ",
+            context->artifacts_directory, build->root_dir, dependency.name, extension
         );
     }
 
