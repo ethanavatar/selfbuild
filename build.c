@@ -44,11 +44,15 @@ struct Build build(struct Build_Context *context, enum Build_Kind kind) {
     static size_t link_flags_count = 0;
 
     if (kind == Build_Kind_Shared_Library) {
-        link_flags_count = 3;
-        link_flags = calloc(3, sizeof(char *));
-        link_flags[0] = strdup("-lwinmm");
-        link_flags[1] = strdup("-lgdi32");
-        link_flags[2] = strdup("-lopengl32");
+        link_flags_count = 6;
+        link_flags = calloc(6, sizeof(char *));
+        link_flags[0] = strdup("-lkernel32");
+        link_flags[1] = strdup("-luser32");
+        link_flags[2] = strdup("-lshell32");
+
+        link_flags[3] = strdup("-lwinmm");
+        link_flags[4] = strdup("-lgdi32");
+        link_flags[5] = strdup("-lopengl32");
     }
 
     static struct Build lib = {

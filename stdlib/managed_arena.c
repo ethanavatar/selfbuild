@@ -56,6 +56,7 @@ void *managed_arena_allocate(void *data_context, size_t size) {
         assert(false && "out of memory");
     }
 
+    //managed_arena_print(self);
     return result;
 }
 

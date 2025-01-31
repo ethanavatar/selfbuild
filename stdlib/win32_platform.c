@@ -43,15 +43,92 @@ void *win32_get_symbol_address(void *library, const char *symbol_name) {
     return GetProcAddress((HMODULE) library, symbol_name);
 }
 
+// https://stackoverflow.com/a/65949019
+static BOOL DirectoryExists(LPCTSTR szPath, BOOL *exists) {
+    *exists = FALSE;
+    size_t szLen = strlen(szPath);
+    if (szLen > 0 && szPath[szLen - 1] == '\\') {
+        --szLen;
+    }
+    
+    HANDLE heap = GetProcessHeap();
+    char *szPath2 = (char *) HeapAlloc(heap, 0, (szLen + 3) * sizeof(TCHAR));
+    
+    if (!szPath2) {
+        return FALSE;
+    }
+
+    CopyMemory(szPath2, szPath, szLen * sizeof(TCHAR));
+    szPath2[szLen] = '\\';
+    szPath2[szLen + 1] = '.';
+    szPath2[szLen + 2] = 0;
+    
+    WIN32_FILE_ATTRIBUTE_DATA attribs = { 0 };
+    BOOL success = GetFileAttributesExA(szPath2, GetFileExInfoStandard, &attribs);
+    
+    DWORD dwAttrib = attribs.dwFileAttributes;
+    
+    HeapFree(heap, 0, szPath2);
+    
+    if (success && dwAttrib != INVALID_FILE_ATTRIBUTES) {
+        *exists = TRUE; /* no point checking FILE_ATTRIBUTE_DIRECTORY on "." */
+        return TRUE;
+    }
+
+
+    DWORD lastError = GetLastError();
+    BOOL  realError = lastError != ERROR_PATH_NOT_FOUND;
+
+    /*
+     * If we get anything other than ERROR_PATH_NOT_FOUND then something's wrong.
+     * Could be hardware IO, lack of permissions, a symbolic link pointing to somewhere
+     * you don't have access, etc.
+     */
+    return realError;
+}
+
+void win32_print_last_error(void) {
+    DWORD lastError = GetLastError();
+    LPSTR messageBuffer = NULL;
+    size_t size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, lastError,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPSTR) &messageBuffer,
+        0, NULL
+    );
+    fprintf(stderr, "%#8lX: %.*s\n", lastError, (int) size, messageBuffer);
+}
+
 // https://stackoverflow.com/a/6218957
 bool win32_dir_exists(const char *path) {
-    DWORD attributes = GetFileAttributes(path);
+#if 0
+    DWORD attributes = GetFileAttributesA(path);
+
+    LPSTR messageBuffer = nullptr;
+    size_t size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPSTR) &messageBuffer,
+        0, NULL
+    );
+    fprintf(stderr, "last_error: %.*s\n", (int) size, messageBuffer);
+
     return (attributes != INVALID_FILE_ATTRIBUTES) &&
            (attributes &  FILE_ATTRIBUTE_DIRECTORY);
+
+#else
+    BOOL exists = FALSE;
+    BOOL ok = DirectoryExists(path, &exists);
+    assert(ok);
+
+    return exists == TRUE;
+#endif
 }
 
 bool win32_file_exists(const char *path) {
-    DWORD attributes = GetFileAttributes(path);
+    DWORD attributes = GetFileAttributesA(path);
     return (attributes != INVALID_FILE_ATTRIBUTES) &&
            (attributes &  FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
