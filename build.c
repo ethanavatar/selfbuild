@@ -75,7 +75,39 @@ struct Build build(struct Build_Context *context, enum Build_Kind kind) {
     return lib;
 }
 
-struct Build test(struct Build_Context *context) {
+struct Build build_tests(struct Build_Context *context) {
+    static char *test_files[]    = { "tests/tests_main.c" };
+    static char *test_includes[] = { "." };
+
+    static char *compile_flags[] = {
+        "-g", "-gcodeview",
+    };
+
+    static char *link_flags[] = {
+        "-g", "-gcodeview", "-Wl,--pdb=",
+    };
+
+    static struct Build test_exe = {
+        .kind = Build_Kind_Executable,
+        .name = "tests",
+
+        .sources             = test_files,
+        .sources_count       = sizeof(test_files) / sizeof(char *),
+
+        .compile_flags       = compile_flags,
+        .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
+
+        .link_flags          = link_flags,
+        .link_flags_count    = sizeof(link_flags) / sizeof(char *),
+
+        .includes            = test_includes,
+        .includes_count      = sizeof(test_includes) / sizeof(char *),
+    };
+
+    return test_exe;
+}
+
+struct Build build_opengl_test(struct Build_Context *context) {
     static char *test_files[]    = { "test/test.c" };
     static char *test_includes[] = { ".", "cglm/include" };
 
@@ -91,55 +123,26 @@ struct Build test(struct Build_Context *context) {
 
     static struct Build test_exe = {
         .kind = Build_Kind_Executable,
-        .name = "test",
+        .name = "opengl_test",
 
-        .sources        = test_files,
-        .sources_count  = sizeof(test_files) / sizeof(char *),
+        .sources             = test_files,
+        .sources_count       = sizeof(test_files) / sizeof(char *),
 
         .compile_flags       = compile_flags,
         .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
 
-        .link_flags       = link_flags,
-        .link_flags_count = sizeof(link_flags) / sizeof(char *),
+        .link_flags          = link_flags,
+        .link_flags_count    = sizeof(link_flags) / sizeof(char *),
 
-        .includes       = test_includes,
-        .includes_count = sizeof(test_includes) / sizeof(char *),
+        .includes            = test_includes,
+        .includes_count      = sizeof(test_includes) / sizeof(char *),
     };
 
     return test_exe;
 }
 
-#include <string.h>
-#include "stdlib/array_list.h"
-#include "stdlib/array_list.c"
-
-struct Rope {
-    struct Array_List_Header header;
-    char *items;
-};
 
 int main(void) {
-
-    // @TODO: Make tests!!!!!
-    struct Thread_Context tctx;
-    thread_context_init_and_equip(&tctx);
-    struct Allocator scratch = scratch_begin();
-
-    struct Rope rope = { 0 };
-    array_list_init(&rope, &scratch);
-
-    char *s = "Hello, Sailor!";
-    array_list_append_many(&rope, s, strlen(s));
-    array_list_append(&rope, '\n');
-
-    fprintf(stderr, "%.*s", (int) rope.header.count, rope.items);
-
-    array_list_destroy(&rope);
-
-    scratch_end(&scratch);
-    thread_context_release();
-
-    /*
     struct Thread_Context tctx;
     thread_context_init_and_equip(&tctx);
 
@@ -162,18 +165,22 @@ int main(void) {
     struct Build module = build(&context, Build_Kind_Static_Library);
     module.root_dir = ".";
 
-    struct Build test_exe = test(&context);
-    test_exe.root_dir = ".";
-    test_exe.dependencies = calloc(1, sizeof(struct Build));
-    add_dependency(&test_exe, module);
+    struct Build opengl_test_exe = build_opengl_test(&context);
+    opengl_test_exe.root_dir     = ".";
+    opengl_test_exe.dependencies = calloc(1, sizeof(struct Build));
+    add_dependency(&opengl_test_exe, module);
+    build_module(&context, &opengl_test_exe);
 
-    build_module(&context, &test_exe);
+    struct Build tests_exe = build_tests(&context);
+    tests_exe.root_dir     = ".";
+    tests_exe.dependencies = calloc(1, sizeof(struct Build));
+    add_dependency(&tests_exe, module);
+    build_module(&context, &tests_exe);
 
     managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");
 
     scratch_end(&scratch);
     thread_context_release();
-    */
     return 0;
 }
