@@ -104,17 +104,6 @@ void win32_print_last_error(void) {
 bool win32_dir_exists(const char *path) {
 #if 0
     DWORD attributes = GetFileAttributesA(path);
-
-    LPSTR messageBuffer = nullptr;
-    size_t size = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, GetLastError(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPSTR) &messageBuffer,
-        0, NULL
-    );
-    fprintf(stderr, "last_error: %.*s\n", (int) size, messageBuffer);
-
     return (attributes != INVALID_FILE_ATTRIBUTES) &&
            (attributes &  FILE_ATTRIBUTE_DIRECTORY);
 

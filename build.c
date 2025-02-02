@@ -109,7 +109,33 @@ struct Build test(struct Build_Context *context) {
     return test_exe;
 }
 
+#include "stdlib/array_list.h"
+#include "stdlib/array_list.c"
+
+struct Rope {
+    struct Array_List_Header header;
+    char *items;
+};
+
 int main(void) {
+    struct Thread_Context tctx;
+    thread_context_init_and_equip(&tctx);
+    struct Allocator scratch = scratch_begin();
+
+    struct Rope rope = { 0 };
+    array_list_init(&rope, &scratch);
+    array_list_append(&rope, 'H');
+    array_list_append(&rope, 'e');
+    array_list_append(&rope, 'l');
+    array_list_append(&rope, 'l');
+    array_list_append(&rope, 'o');
+
+    fprintf(stderr, "%.*s", (int) rope.header.count, rope.items);
+
+    scratch_end(&scratch);
+    thread_context_release();
+
+    /*
     struct Thread_Context tctx;
     thread_context_init_and_equip(&tctx);
 
@@ -144,5 +170,6 @@ int main(void) {
 
     scratch_end(&scratch);
     thread_context_release();
+    */
     return 0;
 }
