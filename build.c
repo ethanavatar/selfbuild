@@ -13,6 +13,7 @@
 #include "stdlib/managed_arena.c"
 #include "stdlib/scratch_memory.c"
 #include "stdlib/string_builder.c"
+#include "stdlib/array_list.c"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
 
@@ -32,6 +33,8 @@ struct Build build(struct Build_Context *context, enum Build_Kind kind) {
 
         "windowing/windowing_win32.c",
         "windowing/drawing.c",
+
+        "stdlib/array_list.c",
     };
 
     static char *includes[] = { "." };

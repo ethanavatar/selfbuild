@@ -20,6 +20,8 @@ void _array_list_ensure_can_append(
     size_t items_to_add
 );
 
+void _array_list_clear(struct Array_List_Header *header, void *items);
+
 #define array_list_init(collection, allocator) \
     (_array_list_init(&(collection)->header, (allocator)))
 
@@ -51,6 +53,9 @@ void _array_list_ensure_can_append(
 
 #define array_list_destroy(collection) \
     (_array_list_destroy(&(collection)->header, (collection)->items))
+
+#define array_list_clear(collection) \
+    (_array_list_clear(&(collection)->header, (collection)->items))
 
 
 #endif // ARRAY_LIST_H_

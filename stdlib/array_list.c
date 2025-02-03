@@ -1,4 +1,6 @@
 #include <stddef.h>
+#include <assert.h>
+#include <string.h>
 
 #include "stdlib/array_list.h"
 #include "stdlib/allocators.h"
@@ -27,7 +29,8 @@ static void _array_list_expand(
     assert(new_items != NULL && "Failed to resize the array list");
 
     if (old_size > 0) {
-        memcpy(new_items, *items, old_size); // @LibC
+        // @TODO: My own memmove
+        memmove(new_items, *items, old_size); // @LibC
         allocator_release(header->allocator, *items);
     }
 
@@ -47,5 +50,9 @@ void _array_list_ensure_can_append(
 void _array_list_destroy(struct Array_List_Header *header, void *items) {
     allocator_release(header->allocator, items);
     _array_list_init(header, header->allocator);
+}
+
+void _array_list_clear(struct Array_List_Header *header, void *items) {
+    header->count = 0;
 }
 

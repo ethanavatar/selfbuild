@@ -187,7 +187,7 @@ int win32_wait_for_command_ex(char *command) {
 
 int win32_wait_for_command_format(const char *format, ...) {
     struct Allocator scratch = scratch_begin();
-    struct String_Builder sb = string_builder_create(&scratch, 0);
+    struct String_Builder sb = string_builder_create(&scratch);
 
     va_list format_args;
     va_start(format_args, format);

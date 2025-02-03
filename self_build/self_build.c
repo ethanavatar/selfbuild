@@ -94,7 +94,7 @@ struct Build build_submodule(
 
 size_t build_module(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin();
-    struct String_Builder sb = string_builder_create(&scratch, 0);
+    struct String_Builder sb = string_builder_create(&scratch);
 
     for (size_t dep = 0; dep < build->dependencies_count; ++dep) {
         struct Build *module = &build->dependencies[dep];
@@ -208,7 +208,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
     }
 
     struct Allocator scratch = scratch_begin();
-    struct String_Builder sb = string_builder_create(&scratch, 0);
+    struct String_Builder sb = string_builder_create(&scratch);
 
     for (size_t i = 0; i < build->sources_count; ++i) {
         string_builder_append(

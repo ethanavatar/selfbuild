@@ -3,18 +3,17 @@
 
 #include <stddef.h>
 #include "stdlib/allocators.h"
+#include "stdlib/array_list.h"
 
 struct String_View { char *data; size_t length; };
 struct String      { char *data; size_t length; };
 
 struct String_Builder {
-    struct Allocator *allocator;
-    char  *buffer;
-    size_t capacity;
-    size_t length;
+    struct Array_List_Header header;
+    char  *items;
 };
 
-struct String_Builder string_builder_create(struct Allocator *, size_t);
+struct String_Builder string_builder_create(struct Allocator *);
 void string_builder_append       (struct String_Builder *, const char *, ...);
 void string_builder_append_vargs (struct String_Builder *, const char *, va_list);
 void string_builder_clear   (struct String_Builder *);

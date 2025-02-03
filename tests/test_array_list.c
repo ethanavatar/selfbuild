@@ -3,7 +3,6 @@
 #include <assert.h>
 
 #include "stdlib/array_list.h"
-#include "stdlib/array_list.c"
 
 struct Character_Array {
     struct Array_List_Header header;
