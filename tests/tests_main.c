@@ -3,15 +3,15 @@
 #include "stdlib/scratch_memory.h"
 
 #include "tests/test_memory.c"
-#include "tests/test_array_list.c"
+#include "tests/test_list.c"
 
 #define _STRINGIFY_IMPL(X) #X
 #define STRINGIFY(X) _STRINGIFY_IMPL(X)
 
-#define TEST_FUNCTIONS \
-    X(test_clone)     \
-    X(test_array_list_of_characters) \
-    X(test_array_list_of_strings)
+#define TEST_FUNCTIONS         \
+    X(test_clone)              \
+    X(test_list_of_characters) \
+    X(test_list_of_strings)
 
 typedef bool (*Test_Function) (struct Allocator *test_allocator);
 

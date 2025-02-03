@@ -13,103 +13,77 @@
 #include "stdlib/managed_arena.c"
 #include "stdlib/scratch_memory.c"
 #include "stdlib/string_builder.c"
-#include "stdlib/array_list.c"
+#include "stdlib/list.c"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
 
 struct Build build(struct Build_Context *context, enum Build_Kind kind) {
-
-    static char *files[] = {
-        "self_build/self_build.c",
-        "stdlib/win32_platform.c",
-        "stdlib/strings.c",
-
-        "stdlib/allocators.c",
-        "stdlib/arena.c", "stdlib/managed_arena.c",
-        "stdlib/thread_context.c",
-        "stdlib/scratch_memory.c",
-        "stdlib/string_builder.c",
-        "stdlib/file_io_win32.c",
-
-        "windowing/windowing_win32.c",
-        "windowing/drawing.c",
-
-        "stdlib/array_list.c",
-    };
-
-    static char *includes[] = { "." };
-
-    static char *compile_flags[] = {
-        "-g", "-gcodeview",
-    };
-
-    static char **link_flags       = { 0 };
-    static size_t link_flags_count = 0;
-
-    if (kind == Build_Kind_Shared_Library) {
-        link_flags_count = 6;
-        link_flags = calloc(6, sizeof(char *));
-        link_flags[0] = strdup("-lkernel32");
-        link_flags[1] = strdup("-luser32");
-        link_flags[2] = strdup("-lshell32");
-
-        link_flags[3] = strdup("-lwinmm");
-        link_flags[4] = strdup("-lgdi32");
-        link_flags[5] = strdup("-lopengl32");
-    }
-
-    static struct Build lib = {
-        .name = "self_build",
-
-        .sources        = files,
-        .sources_count  = sizeof(files) / sizeof(char *),
-
-        .compile_flags       = compile_flags,
-        .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
-
-        .includes       = includes,
-        .includes_count = sizeof(includes) / sizeof(char *),
-    };
-
+    static struct Build lib = { .name = "self_build" };
     lib.kind = kind;
-    lib.link_flags = link_flags;
-    lib.link_flags_count = link_flags_count;
+    list_init(&lib.sources,       &context->allocator);
+    list_init(&lib.includes,      &context->allocator);
+    list_init(&lib.compile_flags, &context->allocator);
+    list_init(&lib.link_flags,    &context->allocator);
+    list_init(&lib.dependencies,    &context->allocator);
+
+    list_append(&lib.includes, cstring_to_string(".", &context->allocator));
+
+    list_append(&lib.compile_flags, cstring_to_string("-g", &context->allocator));
+    list_append(&lib.compile_flags, cstring_to_string("-gcodeview", &context->allocator));
+
+    list_append(&lib.sources, cstring_to_string("self_build/self_build.c",  &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/win32_platform.c",  &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/strings.c",         &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/allocators.c",      &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/arena.c",           &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/managed_arena.c",   &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/thread_context.c",  &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/scratch_memory.c",  &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/string_builder.c",  &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/file_io_win32.c",   &context->allocator));
+    list_append(&lib.sources, cstring_to_string("windowing/windowing_win32.c", &context->allocator));
+    list_append(&lib.sources, cstring_to_string("windowing/drawing.c",         &context->allocator));
+    list_append(&lib.sources, cstring_to_string("stdlib/list.c",            &context->allocator));
+
+    /*
+    list_append(&lib.link_flags, cstring_to_string("-lkernel32", &context->allocator));
+    list_append(&lib.link_flags, cstring_to_string("-luser32",   &context->allocator));
+    list_append(&lib.link_flags, cstring_to_string("-lshell32",  &context->allocator));
+    list_append(&lib.link_flags, cstring_to_string("-lwinmm",    &context->allocator));
+    list_append(&lib.link_flags, cstring_to_string("-lgdi32",    &context->allocator));
+    list_append(&lib.link_flags, cstring_to_string("-lopengl32", &context->allocator));
+    */
 
     return lib;
 }
 
 struct Build build_tests(struct Build_Context *context) {
-    static char *test_files[]    = { "tests/tests_main.c" };
-    static char *test_includes[] = { "." };
-
-    static char *compile_flags[] = {
-        "-g", "-gcodeview",
-    };
-
-    static char *link_flags[] = {
-        "-g", "-gcodeview", "-Wl,--pdb=",
-    };
-
     static struct Build test_exe = {
-        .kind = Build_Kind_Executable,
         .name = "tests",
-
-        .sources             = test_files,
-        .sources_count       = sizeof(test_files) / sizeof(char *),
-
-        .compile_flags       = compile_flags,
-        .compile_flags_count = sizeof(compile_flags) / sizeof(char *),
-
-        .link_flags          = link_flags,
-        .link_flags_count    = sizeof(link_flags) / sizeof(char *),
-
-        .includes            = test_includes,
-        .includes_count      = sizeof(test_includes) / sizeof(char *),
+        .kind = Build_Kind_Executable,
     };
+
+    list_init(&test_exe.sources,       &context->allocator);
+    list_init(&test_exe.includes,      &context->allocator);
+    list_init(&test_exe.compile_flags, &context->allocator);
+    list_init(&test_exe.link_flags,    &context->allocator);
+    list_init(&test_exe.dependencies,    &context->allocator);
+
+    list_append(&test_exe.sources, cstring_to_string("tests/tests_main.c", &context->allocator));
+
+    list_append(&test_exe.includes, cstring_to_string(".", &context->allocator));
+
+    list_append(&test_exe.compile_flags, cstring_to_string("-g", &context->allocator));
+    list_append(&test_exe.compile_flags, cstring_to_string("-gcodeview", &context->allocator));
+
+    list_append(&test_exe.link_flags, cstring_to_string("-g", &context->allocator));
+    list_append(&test_exe.link_flags, cstring_to_string("-gcodeview", &context->allocator));
+    list_append(&test_exe.link_flags, cstring_to_string("-Wl,--pdb=", &context->allocator));
 
     return test_exe;
 }
 
+/*
 struct Build build_opengl_test(struct Build_Context *context) {
     static char *test_files[]    = { "test/test.c" };
     static char *test_includes[] = { ".", "cglm/include" };
@@ -143,7 +117,18 @@ struct Build build_opengl_test(struct Build_Context *context) {
 
     return test_exe;
 }
+*/
 
+#include <stdlib.h>
+
+void *libc_allocate (void *, size_t size)   { return calloc(1, size); }
+void  libc_release  (void *, void *address) { free(address); }
+
+static const struct Allocator libc_allocator = {
+    .data_context = NULL,
+    .allocate     = libc_allocate,
+    .release      = libc_release,
+};
 
 int main(void) {
     struct Thread_Context tctx;
@@ -163,8 +148,13 @@ int main(void) {
         .self_build_path     = self_build_path,
         .artifacts_directory = artifacts_directory,
         .current_directory   = cwd,
+
+        // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
+        // for hierarchical lifetimes
+        .allocator = libc_allocator,
     };
 
+#if 0
     struct Build module = build(&context, Build_Kind_Static_Library);
     module.root_dir = ".";
 
@@ -179,6 +169,15 @@ int main(void) {
     tests_exe.dependencies = calloc(1, sizeof(struct Build));
     add_dependency(&tests_exe, module);
     build_module(&context, &tests_exe);
+#else
+    struct Build module = build(&context, Build_Kind_Static_Library);
+    module.root_dir = ".";
+
+    struct Build tests_exe = build_tests(&context);
+    tests_exe.root_dir     = ".";
+    add_dependency(&tests_exe, module);
+    build_module(&context, &tests_exe);
+#endif
 
     managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");

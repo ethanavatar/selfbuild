@@ -9,7 +9,7 @@ struct String_Builder string_builder_create(
     struct Allocator *allocator
 ) {
     struct String_Builder b = { 0 };
-    array_list_init(&b, allocator);
+    list_init(&b, allocator);
     return b;
 }
 
@@ -20,7 +20,7 @@ void string_builder_append_vargs(
     size_t extra_length = vsnprintf(NULL, 0, format, format_args);
     size_t item_size    = sizeof(*builder->items);
 
-    _array_list_ensure_can_append(
+    _list_ensure_can_append(
         &builder->header, (void **) &builder->items,
         item_size, extra_length + 1
     );
@@ -43,14 +43,14 @@ void string_builder_append(
 }
 
 void string_builder_clear(struct String_Builder *builder) {
-    array_list_clear(builder);
+    list_clear(builder);
     if (builder->items) {
         builder->items[0] = '\0';
     }
 }
 
 void string_builder_destroy(struct String_Builder *builder) {
-    array_list_destroy(builder);
+    list_destroy(builder);
 }
 
 static char *EMPTY_CSTRING = "";

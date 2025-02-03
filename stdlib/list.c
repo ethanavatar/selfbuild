@@ -2,19 +2,19 @@
 #include <assert.h>
 #include <string.h>
 
-#include "stdlib/array_list.h"
+#include "stdlib/list.h"
 #include "stdlib/allocators.h"
 
-void _array_list_init(struct Array_List_Header *header, struct Allocator *allocator) {
-    *header = (struct Array_List_Header) {
+void _list_init(struct List_Header *header, struct Allocator *allocator) {
+    *header = (struct List_Header) {
         .count     = 0,
         .capacity  = 0,
         .allocator = allocator,
     };
 }
 
-static void _array_list_expand(
-    struct Array_List_Header *header, void **items,
+static void _list_expand(
+    struct List_Header *header, void **items,
     size_t item_size
 ) {
     size_t old_size = header->capacity * item_size;
@@ -26,7 +26,7 @@ static void _array_list_expand(
     }
 
     void *new_items = allocator_allocate(header->allocator, header->capacity * item_size);
-    assert(new_items != NULL && "Failed to resize the array list");
+    assert(new_items != NULL && "Failed to resize the list");
 
     if (old_size > 0) {
         // @TODO: My own memmove
@@ -37,22 +37,25 @@ static void _array_list_expand(
     *items = new_items;
 }
 
-void _array_list_ensure_can_append(
-    struct Array_List_Header *header, void **items,
+void _list_ensure_can_append(
+    struct List_Header *header, void **items,
     size_t item_size, size_t items_to_add
 ) {
     size_t new_count = header->count + items_to_add;
     while (new_count >= header->capacity) {
-        _array_list_expand(header, items, item_size);
+        _list_expand(header, items, item_size);
     }
 }
 
-void _array_list_destroy(struct Array_List_Header *header, void *items) {
+void _list_destroy(struct List_Header *header, void *items) {
     allocator_release(header->allocator, items);
-    _array_list_init(header, header->allocator);
+    _list_init(header, header->allocator);
 }
 
-void _array_list_clear(struct Array_List_Header *header, void *items) {
+void _list_clear(struct List_Header *header, void *items) {
     header->count = 0;
 }
 
+size_t _list_length(struct List_Header *header) {
+    return header->count;
+}

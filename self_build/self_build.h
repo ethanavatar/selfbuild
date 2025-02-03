@@ -9,7 +9,7 @@
 #include "stdlib/managed_arena.h"
 #include "stdlib/scratch_memory.h"
 #include "stdlib/string_builder.h"
-#include "stdlib/array_list.h"
+#include "stdlib/list.h"
 
 enum Build_Kind {
     Build_Kind_Static_Library,
@@ -22,30 +22,25 @@ struct Build {
     char *name;
     enum Build_Kind kind;
 
-    char  **sources;
-    size_t  sources_count;
-
-    char  **compile_flags;
-    size_t  compile_flags_count;
-
-    char  **link_flags;
-    size_t  link_flags_count;
-
-    char  **includes;
-    size_t  includes_count;
+    struct String_List sources;
+    struct String_List compile_flags;
+    struct String_List link_flags;
+    struct String_List includes;
 
     bool should_recompile;
-
     char *root_dir;
 
-    size_t dependencies_count;
-    struct Build *dependencies;
+    struct Build_List {
+        struct List_Header header;
+        struct Build *items;
+    } dependencies;
 };
 
 struct Build_Context {
     char *artifacts_directory;
     char *current_directory;
     char *self_build_path;
+    struct Allocator allocator;
 };
 
 typedef struct Build (*Build_Function)(struct Build_Context *, enum Build_Kind);

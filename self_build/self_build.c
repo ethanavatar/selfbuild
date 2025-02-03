@@ -96,34 +96,41 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin();
     struct String_Builder sb = string_builder_create(&scratch);
 
-    for (size_t dep = 0; dep < build->dependencies_count; ++dep) {
-        struct Build *module = &build->dependencies[dep];
+    fprintf(stderr, "Building module: %s\n", build->name);
+
+    for (size_t dep = 0; dep < list_length(build->dependencies); ++dep) {
+        struct Build *module = &build->dependencies.items[dep];
         size_t compiled = build_module(context, module);
         build->should_recompile = compiled > 0;
 
         string_builder_append(&sb, "-I%s ", module->root_dir);
 
-        for (size_t i = 0; i < module->includes_count; ++i) {
-            string_builder_append(&sb, "-I%s/%s ", module->root_dir, module->includes[i]);
+        for (size_t i = 0; i < list_length(module->includes); ++i) {
+            struct String flag = build->includes.items[i];
+            string_builder_append(&sb, "-I%s/%.*s ", module->root_dir, (int) flag.length, flag.data);
         }
     }
 
-    for (size_t i = 0; i < build->includes_count; ++i) {
-        string_builder_append(&sb, "-I%s/%s ", build->root_dir, build->includes[i]);
+    for (size_t i = 0; i < list_length(build->includes); ++i) {
+        struct String flag = build->includes.items[i];
+        string_builder_append(&sb, "-I%s/%.*s ", build->root_dir, (int) flag.length, flag.data);
     }
 
-    for (size_t i = 0; i < build->compile_flags_count; ++i) {
-        string_builder_append(&sb, "%s ", build->compile_flags[i]);
+    for (size_t i = 0; i < list_length(build->compile_flags); ++i) {
+        struct String flag = build->compile_flags.items[i];
+        string_builder_append(&sb, "%.*s ", (int) flag.length, flag.data);
     }
 
     struct String includes = string_builder_to_string(&sb, &scratch);
     string_builder_clear(&sb);
 
     size_t compiled_count = 0;
-    for (size_t i = 0; i < build->sources_count; ++i) {
+    for (size_t i = 0; i < list_length(build->sources); ++i) {
         struct Allocator sources_scratch = scratch_begin();
 
-        char *source_file_path = format_cstring(&sources_scratch, "%s/%s", build->root_dir, build->sources[i]);
+        struct String source = build->sources.items[i];
+
+        char *source_file_path = format_cstring(&sources_scratch, "%s/%.*s", build->root_dir, (int) source.length, source.data);
         char *object_file_path = format_cstring(&sources_scratch, "%s/%s.o", context->artifacts_directory, source_file_path);
 
         char dir[255] = { 0 };
@@ -210,15 +217,17 @@ void link_objects(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin();
     struct String_Builder sb = string_builder_create(&scratch);
 
-    for (size_t i = 0; i < build->sources_count; ++i) {
+    for (size_t i = 0; i < list_length(build->sources); ++i) {
+        struct String source = build->sources.items[i];
         string_builder_append(
-            &sb, "%s/%s/%s.o ",
-            context->artifacts_directory, build->root_dir, build->sources[i]
+            &sb, "%s/%s/%.*s.o ",
+            context->artifacts_directory, build->root_dir,
+            (int) source.length, source.data
         );
     }
 
-    for (size_t i = 0; i < build->dependencies_count; ++i) {
-        struct Build dependency = build->dependencies[i];
+    for (size_t i = 0; i < list_length(build->dependencies); ++i) {
+        struct Build dependency = build->dependencies.items[i];
         const char *extension = NULL;
 
         static_assert(Build_Kind_COUNT == 3);
@@ -235,10 +244,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
-    fprintf(stderr, "flags count: %zu\n", build->link_flags_count);
-    for (size_t i = 0; i < build->link_flags_count; ++i) {
-        fprintf(stderr, "flag: %s\n", build->link_flags[i]);
-        string_builder_append(&sb, "%s ", build->link_flags[i]);
+    for (size_t i = 0; i < list_length(build->link_flags); ++i) {
+        struct String flag = build->link_flags.items[i];
+        string_builder_append(&sb, "%.*s ", (int) flag.length, flag.data);
     }
 
     struct String artifacts = string_builder_to_string(&sb, &scratch);
@@ -250,5 +258,5 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 }
 
 void add_dependency(struct Build *module, struct Build dependency) {
-    module->dependencies[module->dependencies_count++] = dependency;
+    list_append(&module->dependencies, dependency);
 }

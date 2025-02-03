@@ -3,11 +3,11 @@
 
 #include <stddef.h>
 #include "stdlib/allocators.h"
-#include "stdlib/array_list.h"
+#include "stdlib/list.h"
 #include "stdlib/strings.h"
 
 struct String_Builder {
-    struct Array_List_Header header;
+    struct List_Header header;
     char  *items;
 };
 
