@@ -4,9 +4,7 @@
 #include <stddef.h>
 #include "stdlib/allocators.h"
 #include "stdlib/array_list.h"
-
-struct String_View { char *data; size_t length; };
-struct String      { char *data; size_t length; };
+#include "stdlib/strings.h"
 
 struct String_Builder {
     struct Array_List_Header header;

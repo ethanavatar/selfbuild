@@ -9,6 +9,7 @@
 #include "stdlib/managed_arena.h"
 #include "stdlib/scratch_memory.h"
 #include "stdlib/string_builder.h"
+#include "stdlib/array_list.h"
 
 enum Build_Kind {
     Build_Kind_Static_Library,

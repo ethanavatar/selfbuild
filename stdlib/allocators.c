@@ -18,3 +18,9 @@ void allocator_release(struct Allocator *allocator, void *address) {
     }
 }
 
+void *clone(void *data, size_t size, struct Allocator *allocator) {
+    void *address = allocator_allocate(allocator, size);
+    memmove(address, data, size);
+    return address;
+}
+

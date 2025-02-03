@@ -23,3 +23,12 @@ char *format_cstring(struct Allocator *allocator, const char *format, ...) {
     va_end(args);
     return result;
 }
+
+
+struct String cstring_to_string(char *cstring, struct Allocator *allocator) {
+    size_t length = strlen(cstring); // @LibC @TODO
+    return (struct String) {
+        .data   = clone(cstring, sizeof(char) * length, allocator),
+        .length = length,
+    };
+}
