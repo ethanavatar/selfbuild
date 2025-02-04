@@ -10,6 +10,8 @@
 #include "stdlib/allocators.h"
 #include "stdlib/arena.h"
 
+#include "stdlib/list.h"
+
 #include "stdlib/scratch_memory.h"
 #include "stdlib/string_builder.h"
 
@@ -222,5 +224,29 @@ void win32_create_directories(const char *path) {
     }
 
     CreateDirectory(temp, NULL);
+}
+
+struct String_List win32_list_files(char *directory, char *file_pattern, struct Allocator *allocator) {
+    const char *pattern = format_cstring(allocator, "%s/%s", directory, file_pattern);
+
+    WIN32_FIND_DATA ffd;
+    HANDLE hFind = FindFirstFileA(pattern, &ffd);
+    assert(hFind != INVALID_HANDLE_VALUE);
+
+    struct String_List files = { 0 };
+    list_init(&files, allocator);
+
+    do {
+        bool is_file = (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+        if (is_file) {
+            char *path = format_cstring(allocator, "%s/%s", directory, ffd.cFileName);
+            list_append(&files, cstring_to_string(path, allocator));
+            allocator_release(allocator, path);
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+
+    FindClose(hFind);
+    return files;
 }
 

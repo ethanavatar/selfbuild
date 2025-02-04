@@ -13,6 +13,16 @@
 #include "stdlib/string_builder.h"
 #include "stdlib/scratch_memory.h"
 
+struct Build build_create(struct Build_Context *context, enum Build_Kind kind, char *name) {
+    struct Build b = { .kind = kind, .name = name };
+    list_init(&b.sources,       &context->allocator);
+    list_init(&b.includes,      &context->allocator);
+    list_init(&b.compile_flags, &context->allocator);
+    list_init(&b.link_flags,    &context->allocator);
+    list_init(&b.dependencies,  &context->allocator);
+    return b;
+}
+
 bool should_recompile(const char *source_file_path, const char *object_file_path) {
     long long source_file_time = win32_get_file_last_modified_time(source_file_path);
     long long object_file_time = win32_get_file_last_modified_time(object_file_path);

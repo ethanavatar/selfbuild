@@ -2,8 +2,9 @@
 #include "stdlib/thread_context.h"
 #include "stdlib/scratch_memory.h"
 
-#include "tests/test_memory.c"
-#include "tests/test_list.c"
+#include "tests/test_memory_clone.c"
+#include "tests/test_list_of_characters.c"
+#include "tests/test_list_of_strings.c"
 
 #define _STRINGIFY_IMPL(X) #X
 #define STRINGIFY(X) _STRINGIFY_IMPL(X)
@@ -22,7 +23,6 @@ static Test_Function tests_functions[] = { TEST_FUNCTIONS };
 #define X(function) STRINGIFY(function),
 static const char   *tests_names[]     = { TEST_FUNCTIONS };
 #undef X
-
 
 int main(void) {
     struct Thread_Context tctx;

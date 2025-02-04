@@ -48,6 +48,8 @@ typedef struct Build (*Build_Function)(struct Build_Context *, enum Build_Kind);
 struct Build build_submodule(struct Build_Context *, char *, enum Build_Kind);
 size_t build_module(struct Build_Context *, struct Build *);
 
+struct Build build_create(struct Build_Context *context, enum Build_Kind kind, char *name);
+
 bool should_recompile(const char *, const char *);
 void bootstrap(
     const char *build_script_path,

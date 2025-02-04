@@ -17,42 +17,35 @@
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
 
-struct Build build(struct Build_Context *context, enum Build_Kind kind) {
-    static struct Build lib = { .name = "self_build" };
-    lib.kind = kind;
-    list_init(&lib.sources,       &context->allocator);
-    list_init(&lib.includes,      &context->allocator);
-    list_init(&lib.compile_flags, &context->allocator);
-    list_init(&lib.link_flags,    &context->allocator);
-    list_init(&lib.dependencies,    &context->allocator);
+struct Build build(struct Build_Context *context, enum Build_Kind requested_kind) {
+    struct Build lib = build_create(context, requested_kind, "self_build");
 
     list_append(&lib.includes, cstring_to_string(".", &context->allocator));
-
     list_append(&lib.compile_flags, cstring_to_string("-g", &context->allocator));
     list_append(&lib.compile_flags, cstring_to_string("-gcodeview", &context->allocator));
 
-    list_append(&lib.sources, cstring_to_string("self_build/self_build.c",  &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/win32_platform.c",  &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/strings.c",         &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/allocators.c",      &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/arena.c",           &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/managed_arena.c",   &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/thread_context.c",  &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/scratch_memory.c",  &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/string_builder.c",  &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/file_io_win32.c",   &context->allocator));
-    list_append(&lib.sources, cstring_to_string("windowing/windowing_win32.c", &context->allocator));
-    list_append(&lib.sources, cstring_to_string("windowing/drawing.c",         &context->allocator));
-    list_append(&lib.sources, cstring_to_string("stdlib/list.c",            &context->allocator));
+    struct String_List stdlib_sources = win32_list_files("stdlib", "*.c", &context->allocator);
 
-    /*
-    list_append(&lib.link_flags, cstring_to_string("-lkernel32", &context->allocator));
-    list_append(&lib.link_flags, cstring_to_string("-luser32",   &context->allocator));
-    list_append(&lib.link_flags, cstring_to_string("-lshell32",  &context->allocator));
-    list_append(&lib.link_flags, cstring_to_string("-lwinmm",    &context->allocator));
-    list_append(&lib.link_flags, cstring_to_string("-lgdi32",    &context->allocator));
-    list_append(&lib.link_flags, cstring_to_string("-lopengl32", &context->allocator));
-    */
+    for (size_t i = 0; i < list_length(stdlib_sources); ++i) {
+        list_append(&lib.sources, stdlib_sources.items[i]);
+    }
+
+    // @TODO: list_extend, or list_concatenate
+
+    struct String_List selfbuild_sources = win32_list_files("self_build", "*.c", &context->allocator);
+
+    for (size_t i = 0; i < list_length(selfbuild_sources); ++i) {
+        list_append(&lib.sources, selfbuild_sources.items[i]);
+    }
+
+    if (requested_kind == Build_Kind_Shared_Library) {
+        list_append(&lib.link_flags, cstring_to_string("-lkernel32", &context->allocator));
+        list_append(&lib.link_flags, cstring_to_string("-luser32",   &context->allocator));
+        list_append(&lib.link_flags, cstring_to_string("-lshell32",  &context->allocator));
+        list_append(&lib.link_flags, cstring_to_string("-lwinmm",    &context->allocator));
+        list_append(&lib.link_flags, cstring_to_string("-lgdi32",    &context->allocator));
+        list_append(&lib.link_flags, cstring_to_string("-lopengl32", &context->allocator));
+    }
 
     return lib;
 }

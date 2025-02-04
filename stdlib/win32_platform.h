@@ -26,4 +26,6 @@ int       win32_wait_for_command_ex(char *); // @Nit: I would like this to take 
 int       win32_wait_for_command_format(const char *, ...);
 void      win32_create_directories(const char *);
 
+struct String_List win32_list_files(char *directory, char *file_pattern, struct Allocator *allocator);
+
 #endif // WIN32_PLATFORM_H
