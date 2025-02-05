@@ -51,18 +51,9 @@ struct Build build(struct Build_Context *context, enum Build_Kind requested_kind
 }
 
 struct Build build_tests(struct Build_Context *context) {
-    static struct Build test_exe = {
-        .name = "tests",
-        .kind = Build_Kind_Executable,
-    };
+    struct Build test_exe = build_create(context, Build_Kind_Executable, "tests");
 
-    list_init(&test_exe.sources,       &context->allocator);
-    list_init(&test_exe.includes,      &context->allocator);
-    list_init(&test_exe.compile_flags, &context->allocator);
-    list_init(&test_exe.link_flags,    &context->allocator);
-    list_init(&test_exe.dependencies,    &context->allocator);
-
-    list_append(&test_exe.sources, cstring_to_string("tests/tests_main.c", &context->allocator));
+    test_exe.sources = win32_list_files("tests", "*.c", &context->allocator);
 
     list_append(&test_exe.includes, cstring_to_string(".", &context->allocator));
 

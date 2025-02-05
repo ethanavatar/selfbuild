@@ -1,10 +1,8 @@
+#include "stdio.h"
+
 #include "stdlib/allocators.h"
 #include "stdlib/thread_context.h"
 #include "stdlib/scratch_memory.h"
-
-#include "tests/test_memory_clone.c"
-#include "tests/test_list_of_characters.c"
-#include "tests/test_list_of_strings.c"
 
 #define _STRINGIFY_IMPL(X) #X
 #define STRINGIFY(X) _STRINGIFY_IMPL(X)
@@ -13,6 +11,10 @@
     X(test_clone)              \
     X(test_list_of_characters) \
     X(test_list_of_strings)
+
+#define X(function) bool function(struct Allocator *);
+TEST_FUNCTIONS
+#undef X
 
 typedef bool (*Test_Function) (struct Allocator *test_allocator);
 
