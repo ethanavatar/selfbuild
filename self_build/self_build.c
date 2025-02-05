@@ -127,6 +127,8 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
         }
     }
 
+    string_builder_append(&sb, "-I%s ", build->root_dir);
+
     for (size_t i = 0; i < list_length(build->includes); ++i) {
         struct String flag = build->includes.items[i];
         string_builder_append(&sb, "-I%s/%.*s ", build->root_dir, (int) flag.length, flag.data);
@@ -311,4 +313,8 @@ void add_dependency(struct Build *module, struct Build dependency) {
 
 void build_add_system_library(struct Build *build, char *library_name) {
     list_append(&build->system_dependencies, cstring_to_string(library_name, &build->context->allocator));
+}
+
+void build_add_include_path(struct Build *build, char *include_path) {
+    list_append(&build->includes, cstring_to_string(include_path, &build->context->allocator));
 }

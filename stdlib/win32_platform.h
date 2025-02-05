@@ -27,5 +27,6 @@ int       win32_wait_for_command_format(const char *, ...);
 void      win32_create_directories(const char *);
 
 struct String_List win32_list_files(char *directory, char *file_pattern, struct Allocator *allocator);
+void win32_get_executable_dir(char *dir);
 
 #endif // WIN32_PLATFORM_H

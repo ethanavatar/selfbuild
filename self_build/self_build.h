@@ -77,5 +77,6 @@ size_t build_source_files(struct Build_Context *, struct Build *);
 void   link_objects(struct Build_Context *, struct Build *);
 
 void build_add_system_library(struct Build *build, char *library_name);
+void build_add_include_path(struct Build *build, char *include_path);
 
 #endif // SELF_BUILD_H

@@ -250,3 +250,12 @@ struct String_List win32_list_files(char *directory, char *file_pattern, struct 
     return files;
 }
 
+void win32_get_executable_dir(char *dir) {
+    // @TODO: A fixed buffer allocator like Zig would be great in a place like this
+    CHAR lpFilename[MAX_PATH] = { 0 };
+    DWORD size = GetModuleFileName(NULL, lpFilename, sizeof(lpFilename));
+
+    _splitpath(lpFilename, NULL, dir, NULL, NULL);
+    assert(win32_dir_exists(dir));
+}
+

@@ -15,15 +15,7 @@
 #include "stdlib/scratch_memory.c"
 #include "stdlib/string_builder.c"
 #include "stdlib/list.c"
-
-void *libc_allocate (void *, size_t size)   { return calloc(1, size); }
-void  libc_release  (void *, void *address) { free(address); }
-
-static const struct Allocator libc_allocator = {
-    .data_context = NULL,
-    .allocate     = libc_allocate,
-    .release      = libc_release,
-};
+#include "stdlib/libc_allocator.c"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, struct Build_Options);
 
@@ -31,28 +23,15 @@ struct Build build(struct Build_Context *context, struct Build_Options options) 
     struct Allocator *allocator = &context->allocator;
     struct Build lib = build_create(context, options, "self_build");
 
-    list_append(&lib.includes, cstring_to_string(".", allocator));
-
-    lib.sources = win32_list_files("stdlib", "*.c", &context->allocator);
+    list_extend(&lib.sources, win32_list_files("stdlib",     "*.c", allocator));
     list_extend(&lib.sources, win32_list_files("self_build", "*.c", allocator));
-
-    build_add_system_library(&lib, "kernel32");
-    build_add_system_library(&lib, "user32");
-    build_add_system_library(&lib, "shell32");
-    build_add_system_library(&lib, "winmm");
-    build_add_system_library(&lib, "gdi32");
-    build_add_system_library(&lib, "opengl32");
 
     return lib;
 }
 
-struct Build build_tests(struct Build_Context *context) {
-    struct Build_Options options = { .build_kind = Build_Kind_Executable };
+struct Build build_tests(struct Build_Context *context, struct Build_Options options) {
     struct Build test_exe = build_create(context, options, "tests");
-
-    test_exe.sources = win32_list_files("tests", "*.c", &context->allocator);
-    list_append(&test_exe.includes, cstring_to_string(".", &context->allocator));
-
+    list_extend(&test_exe.sources, win32_list_files("tests", "*.c", &context->allocator));
     return test_exe;
 }
 
@@ -75,7 +54,7 @@ int main(void) {
     struct Build_Context context = {
         // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
         // for hierarchical lifetimes
-        .allocator = libc_allocator,
+        .allocator = libc_allocator(),
 
         .current_directory   = cwd,
         .self_build_path     = self_build_path,
@@ -85,9 +64,10 @@ int main(void) {
 
     struct Build_Options module_options = { .build_kind = Build_Kind_Static_Library };
     struct Build module = build(&context, module_options);
-    module.root_dir = ".";
+    module.root_dir     = ".";
 
-    struct Build tests_exe = build_tests(&context);
+    struct Build_Options test_options = { .build_kind = Build_Kind_Executable };
+    struct Build tests_exe = build_tests(&context, test_options);
     tests_exe.root_dir     = ".";
 
     add_dependency(&tests_exe, module);
