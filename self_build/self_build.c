@@ -13,13 +13,19 @@
 #include "stdlib/string_builder.h"
 #include "stdlib/scratch_memory.h"
 
-struct Build build_create(struct Build_Context *context, enum Build_Kind kind, char *name) {
-    struct Build b = { .kind = kind, .name = name };
+struct Build build_create(struct Build_Context *context, struct Build_Options options, char *name) {
+    struct Build b = {
+        .context = context,
+        .options = options,
+        .name    = name
+    };
+
     list_init(&b.sources,       &context->allocator);
     list_init(&b.includes,      &context->allocator);
     list_init(&b.compile_flags, &context->allocator);
-    list_init(&b.link_flags,    &context->allocator);
+    list_init(&b.system_dependencies, &context->allocator);
     list_init(&b.dependencies,  &context->allocator);
+
     return b;
 }
 
@@ -66,7 +72,7 @@ void bootstrap(
 
 struct Build build_submodule(
     struct Build_Context *context, char *module_directory,
-    enum Build_Kind requested_kind
+    struct Build_Options options
 ) {
     struct Allocator scratch = scratch_begin();
 
@@ -95,7 +101,7 @@ struct Build build_submodule(
     memcpy(&submodule_context, context, sizeof(struct Build_Context));
     submodule_context.current_directory = module_directory;
 
-    struct Build module_definition = build_function(&submodule_context, requested_kind);
+    struct Build module_definition = build_function(&submodule_context, options);
     module_definition.root_dir = module_directory;
 
     scratch_end(&scratch);
@@ -129,6 +135,12 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
     for (size_t i = 0; i < list_length(build->compile_flags); ++i) {
         struct String flag = build->compile_flags.items[i];
         string_builder_append(&sb, "%.*s ", (int) flag.length, flag.data);
+    }
+
+    if ((context->debug_info_kind == Debug_Info_Kind_Portable) ||
+        (context->debug_info_kind == Debug_Info_Kind_Embedded)
+    ) {
+        string_builder_append(&sb, "-g -gcodeview");
     }
 
     struct String includes = string_builder_to_string(&sb, &scratch);
@@ -189,11 +201,12 @@ void link_shared_library(struct Build_Context *, struct Build *, struct String *
 void link_executable    (struct Build_Context *, struct Build *, struct String *);
 
 void link_one(struct Build_Context *context, struct Build *build, struct String *artifacts) {
+    enum Build_Kind kind = build->options.build_kind;
     static_assert(Build_Kind_COUNT == 3);
     if (0) { }
-    else if (build->kind == Build_Kind_Static_Library) { link_static_library(context, build, artifacts); }
-    else if (build->kind == Build_Kind_Shared_Library) { link_shared_library(context, build, artifacts); }
-    else if (build->kind == Build_Kind_Executable)     { link_executable(context, build, artifacts);     }
+    else if (kind == Build_Kind_Static_Library) { link_static_library(context, build, artifacts); }
+    else if (kind == Build_Kind_Shared_Library) { link_shared_library(context, build, artifacts); }
+    else if (kind == Build_Kind_Executable)     { link_executable(context, build, artifacts);     }
 }
 
 void link_static_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
@@ -205,7 +218,7 @@ void link_static_library(struct Build_Context *context, struct Build *build, str
 
 void link_shared_library(struct Build_Context *context, struct Build *build, struct String *artifacts) {
     win32_wait_for_command_format(
-        "clang -o %s/%s.dll %.*s -std=c23 -shared -fPIC",
+        "clang -o %s/%s.dll -std=c23 -shared -fPIC %.*s",
         context->artifacts_directory, build->name,
         (int) artifacts->length, artifacts->data
     );
@@ -213,7 +226,7 @@ void link_shared_library(struct Build_Context *context, struct Build *build, str
 
 void link_executable(struct Build_Context *context, struct Build *build, struct String *artifacts) {
     win32_wait_for_command_format(
-        "clang -o %s/%s.exe %.*s -std=c23",
+        "clang -o %s/%s.exe -std=c23 %.*s",
         context->artifacts_directory, build->name,
         (int) artifacts->length, artifacts->data
     );
@@ -242,9 +255,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
         static_assert(Build_Kind_COUNT == 3);
         if (0) { }
-        else if (dependency.kind == Build_Kind_Static_Library) { extension = "lib"; }
-        else if (dependency.kind == Build_Kind_Shared_Library) { extension = "dll"; }
-        else if (dependency.kind == Build_Kind_Executable) {
+        else if (dependency.options.build_kind == Build_Kind_Static_Library) { extension = "lib"; }
+        else if (dependency.options.build_kind == Build_Kind_Shared_Library) { extension = "dll"; }
+        else if (dependency.options.build_kind == Build_Kind_Executable) {
             assert(false && "cant link against an executable");
         }
 
@@ -254,9 +267,34 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         );
     }
 
-    for (size_t i = 0; i < list_length(build->link_flags); ++i) {
-        struct String flag = build->link_flags.items[i];
-        string_builder_append(&sb, "%.*s ", (int) flag.length, flag.data);
+    for (size_t i = 0; i < list_length(build->system_dependencies); ++i) {
+        struct String flag = build->system_dependencies.items[i];
+
+        char *arg_format = NULL;
+
+        static_assert(Build_Kind_COUNT == 3);
+        if (0) { }
+        else if (build->options.build_kind == Build_Kind_Static_Library) { arg_format = "%.*s.lib "; }
+        else if (build->options.build_kind == Build_Kind_Shared_Library) { arg_format = "-l%.*s ";   }
+        else if (build->options.build_kind == Build_Kind_Executable)     { arg_format = "-l%.*s ";   }
+        assert(arg_format != NULL);
+
+        string_builder_append(&sb, arg_format, (int) flag.length, flag.data);
+    }
+
+    // @Clean
+    if ((build->options.build_kind == Build_Kind_Shared_Library) ||
+        (build->options.build_kind == Build_Kind_Executable)
+    ) {
+        if ((context->debug_info_kind == Debug_Info_Kind_Portable) ||
+            (context->debug_info_kind == Debug_Info_Kind_Embedded)
+        ) {
+            string_builder_append(&sb, "-g -gcodeview ");
+
+            if (context->debug_info_kind == Debug_Info_Kind_Portable) {
+                string_builder_append(&sb, "-Wl,--pdb= ");
+            }
+        }
     }
 
     struct String artifacts = string_builder_to_string(&sb, &scratch);
@@ -269,4 +307,8 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
 void add_dependency(struct Build *module, struct Build dependency) {
     list_append(&module->dependencies, dependency);
+}
+
+void build_add_system_library(struct Build *build, char *library_name) {
+    list_append(&build->system_dependencies, cstring_to_string(library_name, &build->context->allocator));
 }

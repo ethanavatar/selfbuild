@@ -25,49 +25,33 @@ static const struct Allocator libc_allocator = {
     .release      = libc_release,
 };
 
-void build_link_libraries(struct Build *build, struct Allocator *allocator, char *library) {
-    list_append(&build->link_flags, cstring_to_string(lib_name, allocator));
-}
+extern struct Build __declspec(dllexport) build(struct Build_Context *, struct Build_Options);
 
-extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
-
-struct Build build(struct Build_Context *context, enum Build_Kind requested_kind) {
+struct Build build(struct Build_Context *context, struct Build_Options options) {
     struct Allocator *allocator = &context->allocator;
-
-    struct Build lib = build_create(context, requested_kind, "self_build");
+    struct Build lib = build_create(context, options, "self_build");
 
     list_append(&lib.includes, cstring_to_string(".", allocator));
-    list_append(&lib.compile_flags, cstring_to_string("-g", allocator));
-    list_append(&lib.compile_flags, cstring_to_string("-gcodeview", allocator));
 
     lib.sources = win32_list_files("stdlib", "*.c", &context->allocator);
     list_extend(&lib.sources, win32_list_files("self_build", "*.c", allocator));
 
-    if (requested_kind == Build_Kind_Shared_Library) {
-        list_append(&lib.link_flags, cstring_to_string("-lkernel32", allocator));
-        list_append(&lib.link_flags, cstring_to_string("-luser32",   allocator));
-        list_append(&lib.link_flags, cstring_to_string("-lshell32",  allocator));
-        list_append(&lib.link_flags, cstring_to_string("-lwinmm",    allocator));
-        list_append(&lib.link_flags, cstring_to_string("-lgdi32",    allocator));
-        list_append(&lib.link_flags, cstring_to_string("-lopengl32", allocator));
-    }
+    build_add_system_library(&lib, "kernel32");
+    build_add_system_library(&lib, "user32");
+    build_add_system_library(&lib, "shell32");
+    build_add_system_library(&lib, "winmm");
+    build_add_system_library(&lib, "gdi32");
+    build_add_system_library(&lib, "opengl32");
 
     return lib;
 }
 
 struct Build build_tests(struct Build_Context *context) {
-    struct Build test_exe = build_create(context, Build_Kind_Executable, "tests");
+    struct Build_Options options = { .build_kind = Build_Kind_Executable };
+    struct Build test_exe = build_create(context, options, "tests");
 
     test_exe.sources = win32_list_files("tests", "*.c", &context->allocator);
-
     list_append(&test_exe.includes, cstring_to_string(".", &context->allocator));
-
-    list_append(&test_exe.compile_flags, cstring_to_string("-g", &context->allocator));
-    list_append(&test_exe.compile_flags, cstring_to_string("-gcodeview", &context->allocator));
-
-    list_append(&test_exe.link_flags, cstring_to_string("-g", &context->allocator));
-    list_append(&test_exe.link_flags, cstring_to_string("-gcodeview", &context->allocator));
-    list_append(&test_exe.link_flags, cstring_to_string("-Wl,--pdb=", &context->allocator));
 
     return test_exe;
 }
@@ -94,9 +78,12 @@ int main(void) {
         // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
         // for hierarchical lifetimes
         .allocator = libc_allocator,
+
+        .debug_info_kind = Debug_Info_Kind_Portable,
     };
 
-    struct Build module = build(&context, Build_Kind_Static_Library);
+    struct Build_Options module_options = { .build_kind = Build_Kind_Static_Library };
+    struct Build module = build(&context, module_options);
     module.root_dir = ".";
 
     struct Build tests_exe = build_tests(&context);
