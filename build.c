@@ -68,18 +68,19 @@ int main(void) {
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     char *cwd = win32_get_current_directory(&scratch);
     
+    // @TODO: Figure out a way to check if the current run is a result of a bootstrapping
+    // because if so, it should ignore any incremental build checks and build everything
     bootstrap("build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Context context = {
-        .self_build_path     = self_build_path,
-        .artifacts_directory = artifacts_directory,
-        .current_directory   = cwd,
-
         // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
         // for hierarchical lifetimes
         .allocator = libc_allocator,
 
-        .debug_info_kind = Debug_Info_Kind_Portable,
+        .current_directory   = cwd,
+        .self_build_path     = self_build_path,
+        .artifacts_directory = artifacts_directory,
+        .debug_info_kind     = Debug_Info_Kind_Portable,
     };
 
     struct Build_Options module_options = { .build_kind = Build_Kind_Static_Library };
@@ -88,11 +89,14 @@ int main(void) {
 
     struct Build tests_exe = build_tests(&context);
     tests_exe.root_dir     = ".";
+
     add_dependency(&tests_exe, module);
     build_module(&context, &tests_exe);
 
+    /*
     managed_arena_print((struct Managed_Arena *) scratch.data_context);
     fprintf(stderr, "\n");
+    */
 
     scratch_end(&scratch);
     thread_context_release();
