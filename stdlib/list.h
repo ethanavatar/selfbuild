@@ -21,7 +21,7 @@ void _list_ensure_can_append(
 );
 
 void _list_clear(struct List_Header *header, void *items);
-size_t _list_length(struct List_Header *header);
+size_t _list_length(struct List_Header header);
 
 #define list_init(collection, allocator) \
     (_list_init(&(collection)->header, (allocator)))
@@ -52,6 +52,23 @@ size_t _list_length(struct List_Header *header);
         } \
     } while (0);
 
+#define list_extend(collection1, collection2) do { \
+        _list_ensure_can_append(      \
+            &(collection1)->header,          \
+            (void **) &(collection1)->items, \
+            sizeof(*(collection1)->items),   \
+            list_length(collection2) \
+        ); \
+        for ( \
+            size_t _list_appended_count = 0; \
+            _list_appended_count < list_length(collection2); \
+            _list_appended_count++ \
+        ) { \
+            (collection1)->items[(collection1)->header.count++] = \
+                (collection2).items[_list_appended_count]; \
+        } \
+    } while (0);
+
 #define list_destroy(collection) \
     (_list_destroy(&(collection)->header, (collection)->items))
 
@@ -59,6 +76,6 @@ size_t _list_length(struct List_Header *header);
     (_list_clear(&(collection)->header, (collection)->items))
 
 #define list_length(collection) \
-    (_list_length(&(collection).header))
+    (_list_length((collection).header))
 
 #endif // LIST_H_

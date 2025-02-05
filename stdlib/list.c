@@ -56,6 +56,6 @@ void _list_clear(struct List_Header *header, void *items) {
     header->count = 0;
 }
 
-size_t _list_length(struct List_Header *header) {
-    return header->count;
+size_t _list_length(struct List_Header header) {
+    return header.count;
 }
