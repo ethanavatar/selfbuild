@@ -17,8 +17,11 @@ struct Build build(struct Build_Context *context, struct Build_Options options) 
 }
 
 struct Build build_tests(struct Build_Context *context, struct Build_Options options) {
+    struct Allocator *allocator = &context->allocator;
     struct Build test_exe = build_create(context, options, "tests");
-    list_extend(&test_exe.sources, win32_list_files("tests", "*.c", &context->allocator));
+
+    list_extend(&test_exe.sources, win32_list_files("tests", "*.c", allocator));
+
     return test_exe;
 }
 
