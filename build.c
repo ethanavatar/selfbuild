@@ -29,20 +29,19 @@ int main(void) {
     struct Thread_Context tctx = { 0 };
     thread_context_init_and_equip(&tctx);
 
-    struct Allocator scratch = scratch_begin();
+    // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
+    // for hierarchical lifetimes
+    struct Allocator allocator = libc_allocator();
 
     char *artifacts_directory = "bin";
     char *self_build_path     = ".";
 
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
-    char *cwd = win32_get_current_directory(&scratch);
 
     struct Build_Context context = {
-        // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
-        // for hierarchical lifetimes
-        .allocator = libc_allocator(),
+        .allocator = allocator,
 
-        .current_directory   = cwd,
+        .current_directory   = win32_get_current_directory(&allocator),
         .self_build_path     = self_build_path,
         .artifacts_directory = artifacts_directory,
         .debug_info_kind     = Debug_Info_Kind_Portable,
@@ -61,7 +60,6 @@ int main(void) {
     add_dependency(&tests_exe, module);
     build_module(&context, &tests_exe);
 
-    scratch_end(&scratch);
     thread_context_release();
     return 0;
 }

@@ -304,7 +304,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         if ((context->debug_info_kind == Debug_Info_Kind_Portable) ||
             (context->debug_info_kind == Debug_Info_Kind_Embedded)
         ) {
-            string_builder_append(&sb, "-g -gcodeview ");
+            string_builder_append(&sb, "-g ");
 
             if (context->debug_info_kind == Debug_Info_Kind_Portable) {
                 string_builder_append(&sb, "-Wl,--pdb= ");
