@@ -29,4 +29,8 @@ void      win32_create_directories(const char *);
 struct String_List win32_list_files(char *directory, char *file_pattern, struct Allocator *allocator);
 void win32_get_executable_dir(char *dir);
 
+void *win32_create_file(char *file_path);
+void  win32_close_file(void *handle);
+void  win32_delete_file(char *file_path);
+
 #endif // WIN32_PLATFORM_H

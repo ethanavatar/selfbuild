@@ -6,16 +6,8 @@
 #include "self_build/self_build.h"
 #include "self_build/self_build.c"
 
-#include "stdlib/win32_platform.c"
-#include "stdlib/strings.c"
-#include "stdlib/allocators.c"
-#include "stdlib/arena.c"
-#include "stdlib/thread_context.c"
-#include "stdlib/managed_arena.c"
-#include "stdlib/scratch_memory.c"
-#include "stdlib/string_builder.c"
-#include "stdlib/list.c"
-#include "stdlib/libc_allocator.c"
+#define ALL_STDLIB_C_
+#include "self_build/all_stdlib.h"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, struct Build_Options);
 
@@ -36,7 +28,7 @@ struct Build build_tests(struct Build_Context *context, struct Build_Options opt
 }
 
 int main(void) {
-    struct Thread_Context tctx;
+    struct Thread_Context tctx = { 0 };
     thread_context_init_and_equip(&tctx);
 
     struct Allocator scratch = scratch_begin();
@@ -46,10 +38,6 @@ int main(void) {
 
     if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
     char *cwd = win32_get_current_directory(&scratch);
-    
-    // @TODO: Figure out a way to check if the current run is a result of a bootstrapping
-    // because if so, it should ignore any incremental build checks and build everything
-    bootstrap("build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Context context = {
         // @Hack: This is patchwork for until I rewrite the scratch allocator to work properly
@@ -61,6 +49,8 @@ int main(void) {
         .artifacts_directory = artifacts_directory,
         .debug_info_kind     = Debug_Info_Kind_Portable,
     };
+    
+    bootstrap(&context, "build.c", "build.exe", "bin/build.old", ".");
 
     struct Build_Options module_options = { .build_kind = Build_Kind_Static_Library };
     struct Build module = build(&context, module_options);
@@ -72,11 +62,6 @@ int main(void) {
 
     add_dependency(&tests_exe, module);
     build_module(&context, &tests_exe);
-
-    /*
-    managed_arena_print((struct Managed_Arena *) scratch.data_context);
-    fprintf(stderr, "\n");
-    */
 
     scratch_end(&scratch);
     thread_context_release();

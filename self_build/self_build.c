@@ -36,6 +36,7 @@ bool should_recompile(const char *source_file_path, const char *object_file_path
 }
 
 void bootstrap(
+    struct Build_Context *context,
     const char *build_script_path,
     const char *executable_path, const char *old_executable_path,
     const char *self_build_path
@@ -44,6 +45,16 @@ void bootstrap(
 
     bool should_exit = false;
     int  exit_code   = 0;
+
+    char *bootstrap_file_path = format_cstring(&scratch, "%s/bootstrap.lock", context->artifacts_directory);
+    if (win32_file_exists(bootstrap_file_path)) {
+        context->is_bootstrapped = true;
+
+    } else {
+        void *handle = win32_create_file(bootstrap_file_path);
+        win32_close_file(handle);
+
+    }
 
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");
@@ -64,6 +75,7 @@ void bootstrap(
     }
 
     scratch_end(&scratch);
+    win32_delete_file(bootstrap_file_path);
 
     if (should_exit) {
         exit(exit_code);
@@ -163,7 +175,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
         // @Bug: This does not handle the case where a file doesnt exist.
         // It just treats it like it doesnt need to be recompiled
-        if (should_recompile(source_file_path, object_file_path)) {
+        if (context->is_bootstrapped || should_recompile(source_file_path, object_file_path)) {
 
             // @TODO: Set working directory to be next to the root build script
             int exit_code = win32_wait_for_command_format(
@@ -235,7 +247,7 @@ void link_executable(struct Build_Context *context, struct Build *build, struct 
 }
 
 void link_objects(struct Build_Context *context, struct Build *build) {
-    if (!build->should_recompile) {
+    if (!build->should_recompile && !context->is_bootstrapped) {
         return;
     }
 

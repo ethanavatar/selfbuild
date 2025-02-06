@@ -31,6 +31,7 @@ struct Build_Context {
     struct Allocator allocator;
 
     enum Debug_Info_Kind debug_info_kind;
+    bool is_bootstrapped;
 };
 
 struct Build_Options {
@@ -66,6 +67,7 @@ struct Build build_create(struct Build_Context *context, struct Build_Options op
 
 bool should_recompile(const char *, const char *);
 void bootstrap(
+    struct Build_Context *context,
     const char *build_script_path,
     const char *executable_path,
     const char *old_executable_path,

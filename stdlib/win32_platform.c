@@ -259,3 +259,24 @@ void win32_get_executable_dir(char *dir) {
     assert(win32_dir_exists(dir));
 }
 
+
+void *win32_create_file(char *file_path) {
+    return CreateFileA(
+        file_path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+}
+
+void win32_close_file(void *handle) {
+    CloseHandle(handle);
+}
+
+void win32_delete_file(char *file_path) {
+    DeleteFile(file_path);
+}
+
