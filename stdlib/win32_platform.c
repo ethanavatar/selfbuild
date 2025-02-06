@@ -150,7 +150,7 @@ long long win32_get_file_last_modified_time(const char *path) {
 int win32_wait_for_command(
     const char *path, const char *parameters
 ) {
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(NULL);
     char *command = format_cstring(&scratch, "%s %s", path, parameters);
     int exit_code = win32_wait_for_command_ex(command);
     scratch_end(&scratch);
@@ -188,7 +188,7 @@ int win32_wait_for_command_ex(char *command) {
 }
 
 int win32_wait_for_command_format(const char *format, ...) {
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(NULL);
     struct String_Builder sb = string_builder_create(&scratch);
 
     va_list format_args;

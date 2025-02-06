@@ -40,7 +40,7 @@ void bootstrap(
     const char *build_script_path, const char *executable_path,
     const char *self_build_path
 ) {
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(&context->allocator);
 
     bool should_exit = false;
     int  exit_code   = 0;
@@ -87,7 +87,7 @@ struct Build build_submodule(
     struct Build_Context *context, char *module_directory,
     struct Build_Options options
 ) {
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(&context->allocator);
 
     char *module_artifacts_path = format_cstring(
         &scratch,
@@ -122,7 +122,7 @@ struct Build build_submodule(
 }
 
 size_t build_module(struct Build_Context *context, struct Build *build) {
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(&context->allocator);
     struct String_Builder sb = string_builder_create(&scratch);
 
     fprintf(stderr, "Building module: %s\n", build->name);
@@ -163,7 +163,7 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
 
     size_t compiled_count = 0;
     for (size_t i = 0; i < list_length(build->sources); ++i) {
-        struct Allocator sources_scratch = scratch_begin();
+        struct Allocator sources_scratch = scratch_begin(&context->allocator);
 
         struct String source = build->sources.items[i];
 
@@ -252,7 +252,7 @@ void link_objects(struct Build_Context *context, struct Build *build) {
         return;
     }
 
-    struct Allocator scratch = scratch_begin();
+    struct Allocator scratch = scratch_begin(&context->allocator);
     struct String_Builder sb = string_builder_create(&scratch);
 
     for (size_t i = 0; i < list_length(build->sources); ++i) {

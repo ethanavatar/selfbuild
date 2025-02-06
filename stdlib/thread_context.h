@@ -4,7 +4,7 @@
 #include "stdlib/managed_arena.h"
 
 struct Thread_Context {
-    struct Managed_Arena arena;
+    struct Managed_Arena arenas[2];
 };
 
 void thread_context_init_and_equip(struct Thread_Context *);

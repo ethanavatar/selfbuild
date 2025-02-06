@@ -34,7 +34,7 @@ int main(void) {
     bool tests_results[tests_count];
 
     for (size_t tests_index = 0; tests_index < tests_count; ++tests_index) {
-        struct Allocator scratch = scratch_begin();
+        struct Allocator scratch = scratch_begin(NULL);
         tests_results[tests_index] = tests_functions[tests_index](&scratch);
         scratch_end(&scratch);
 

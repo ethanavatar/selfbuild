@@ -3,7 +3,7 @@
 
 #include "stdlib/allocators.h"
 
-struct Allocator scratch_begin(void);
+struct Allocator scratch_begin(struct Allocator *conflict);
 void scratch_end(struct Allocator *);
 
 #endif // SCRATCH_MEMORY_H

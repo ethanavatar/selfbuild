@@ -5,7 +5,7 @@
 #include "stdlib/thread_context.h"
 #include "stdlib/managed_arena.h"
 
-struct Allocator scratch_begin(void) {
+struct Allocator scratch_begin(struct Allocator *conflict) {
     struct Thread_Context *tctx  = thread_context_get();
     
     if (tctx == NULL) {
@@ -13,11 +13,21 @@ struct Allocator scratch_begin(void) {
         assert(false && "Thread context is null");
     }
 
-    struct Managed_Arena  *arena = &tctx->arena;
+    struct Managed_Arena *arena = NULL;
+    if (conflict != NULL) {
+        size_t i = 0;
+        do {
+            arena = &tctx->arenas[i++];
+        } while (conflict->data_context == arena);
+
+    } else {
+        arena = &tctx->arenas[0];
+    }
+
     arena->return_stack[arena->return_stack_count++] = arena->used_bytes;
 
     //fprintf(stderr, "snapshot at %zu\n", arena->used_bytes);
-    return managed_arena_allocator(&tctx->arena);
+    return managed_arena_allocator(arena);
 }
 
 void scratch_end(struct Allocator *allocator) {
