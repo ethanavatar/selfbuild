@@ -37,8 +37,7 @@ bool should_recompile(const char *source_file_path, const char *object_file_path
 
 void bootstrap(
     struct Build_Context *context,
-    const char *build_script_path,
-    const char *executable_path, const char *old_executable_path,
+    const char *build_script_path, const char *executable_path,
     const char *self_build_path
 ) {
     struct Allocator scratch = scratch_begin();
@@ -55,6 +54,8 @@ void bootstrap(
         win32_close_file(handle);
 
     }
+
+    char *old_executable_path = format_cstring(&scratch, "%s/old_build_program", context->artifacts_directory);
 
     if (should_recompile(build_script_path, executable_path)) {
         fprintf(stderr, "Bootstrapping...\n");

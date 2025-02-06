@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <assert.h>
-
 #include "self_build/self_build.h"
 #include "self_build/self_build.c"
 
@@ -50,11 +45,11 @@ int main(void) {
         .debug_info_kind     = Debug_Info_Kind_Portable,
     };
     
-    bootstrap(&context, "build.c", "build.exe", "bin/build.old", ".");
+    bootstrap(&context, "build.c", "build.exe", self_build_path);
 
     struct Build_Options module_options = { .build_kind = Build_Kind_Static_Library };
     struct Build module = build(&context, module_options);
-    module.root_dir     = ".";
+    module.root_dir     = "."; // @TODO: Find a way to make this line unnecessary
 
     struct Build_Options test_options = { .build_kind = Build_Kind_Executable };
     struct Build tests_exe = build_tests(&context, test_options);

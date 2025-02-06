@@ -68,9 +68,7 @@ struct Build build_create(struct Build_Context *context, struct Build_Options op
 bool should_recompile(const char *, const char *);
 void bootstrap(
     struct Build_Context *context,
-    const char *build_script_path,
-    const char *executable_path,
-    const char *old_executable_path,
+    const char *build_script_path, const char *executable_path,
     const char *self_build_path
 );
 
