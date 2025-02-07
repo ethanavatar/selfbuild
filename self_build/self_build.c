@@ -125,8 +125,6 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin(&context->allocator);
     struct String_Builder sb = string_builder_create(&scratch);
 
-    fprintf(stderr, "Building module: %s\n", build->name);
-
     for (size_t dep = 0; dep < list_length(build->dependencies); ++dep) {
         struct Build *module = &build->dependencies.items[dep];
         size_t compiled = build_module(context, module);
@@ -139,6 +137,8 @@ size_t build_module(struct Build_Context *context, struct Build *build) {
             string_builder_append(&sb, "-I%s/%.*s ", module->root_dir, (int) flag.length, flag.data);
         }
     }
+
+    fprintf(stderr, "Building module: %s\n", build->name);
 
     string_builder_append(&sb, "-I%s ", build->root_dir);
 

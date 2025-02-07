@@ -6,7 +6,7 @@
 
 #include "stdlib/win32_platform.h"
 #include "stdlib/managed_arena.h"
-#include "stdlib/memory.h"
+#include "stdlib/memory.c"
 
 #include <windows.h>
 
@@ -32,31 +32,27 @@ void managed_arena_print(struct Managed_Arena *arena) {
     fprintf(stderr, "}");
 }
 
-void *managed_arena_allocate(void *data_context, size_t size) {
+void *managed_arena_allocate(void *data_context, size_t size, size_t alignment) {
     struct Managed_Arena *self = (struct Managed_Arena *) data_context;
 
     void *result = NULL;
 
-    size_t new_used_bytes = self->used_bytes + size;
-    if (new_used_bytes <= self->reserved_bytes) {
-        result = (void *) (self->used_bytes + (ptrdiff_t) self->memory);
-        self->used_bytes = new_used_bytes;
+    result = (void *) align_forward(self->used_bytes + (ptrdiff_t) self->memory, alignment);
+    ptrdiff_t padding = (intptr_t) result - ((intptr_t) self->memory + self->used_bytes);
+    assert((self->used_bytes + padding + size) <= self->reserved_bytes && "Out of memory");
 
-        if (self->used_bytes > self->committed_bytes) {
-            intptr_t new_page = self->used_bytes + (intptr_t) self->memory;
-            VirtualAlloc((void *) new_page, COMMIT_SIZE, MEM_COMMIT, PAGE_READWRITE);
-            self->committed_bytes += COMMIT_SIZE;
-        }
+    self->used_bytes += padding + size;
 
-        if (self->used_bytes > self->high_water_bytes) {
-            self->high_water_bytes = self->used_bytes;
-        }
-
-    } else {
-        assert(false && "out of memory");
+    if (self->used_bytes > self->committed_bytes) {
+        intptr_t new_page = self->used_bytes + (intptr_t) self->memory;
+        VirtualAlloc((void *) new_page, COMMIT_SIZE, MEM_COMMIT, PAGE_READWRITE);
+        self->committed_bytes += COMMIT_SIZE;
     }
 
-    //managed_arena_print(self);
+    if (self->used_bytes > self->high_water_bytes) {
+        self->high_water_bytes = self->used_bytes;
+    }
+
     return result;
 }
 

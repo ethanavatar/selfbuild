@@ -34,7 +34,9 @@ int main(void) {
     char *artifacts_directory = "bin";
     char *self_build_path     = ".";
 
-    if (!win32_dir_exists(artifacts_directory)) win32_create_directories(artifacts_directory);
+    if (!win32_dir_exists(artifacts_directory)) {
+        win32_create_directories(artifacts_directory);
+    }
 
     struct Build_Context context = {
         .allocator = allocator,

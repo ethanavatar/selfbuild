@@ -17,12 +17,9 @@ struct Managed_Arena {
     size_t return_stack_count;
 };
 
-intptr_t align_backward(intptr_t, intptr_t);
-intptr_t align_forward(intptr_t,  intptr_t);
-
 struct Managed_Arena managed_arena_create(void);
 
-void *managed_arena_allocate(void *, size_t);
+void *managed_arena_allocate(void *, size_t, size_t);
 void managed_arena_release  (void *, void *);
 void managed_arena_destroy  (void *);
 

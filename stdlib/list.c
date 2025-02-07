@@ -5,7 +5,10 @@
 #include "stdlib/list.h"
 #include "stdlib/allocators.h"
 
-void _list_init(struct List_Header *header, struct Allocator *allocator) {
+void _list_init(
+    struct List_Header *header,
+    struct Allocator *allocator
+) {
     *header = (struct List_Header) {
         .count     = 0,
         .capacity  = 0,

@@ -4,58 +4,47 @@
 #include <assert.h>
 
 #include "stdlib/allocators.h"
+#include "stdlib/memory.c"
 
 struct Arena arena_create(unsigned char *memory, size_t capacity_bytes) {
     return (struct Arena) {
-        .memory = memory,
-        .capacity_bytes   = capacity_bytes,
-        .used_bytes       = 0,
-        .high_water_bytes = 0,
+        .begin = memory,
+        .capacity = capacity_bytes,
+        .length = 0,
     };
 }
 
 struct Allocator arena_allocator(struct Arena *arena) {
     return (struct Allocator) {
         .data_context = arena,
-        .allocate = arena_allocate,
-        .release  = arena_release,
+        .allocate     = arena_allocate,
+        .release      = arena_release,
     };
 }
 
 void arena_print(struct Arena *arena) {
     fprintf(stderr, "{\n");
-    fprintf(stderr, "\t.memory           = %p,\n",  arena->memory);
-    fprintf(stderr, "\t.capacity_bytes   = %zu,\n", arena->capacity_bytes);
-    fprintf(stderr, "\t.used_bytes       = %zu,\n", arena->used_bytes);
-    fprintf(stderr, "\t.high_water_bytes = %zu,\n", arena->high_water_bytes);
+    fprintf(stderr, "\t.begin    = %p,\n",  arena->begin);
+    fprintf(stderr, "\t.capacity = %zu,\n", arena->capacity);
+    fprintf(stderr, "\t.length   = %zu,\n", arena->length);
     fprintf(stderr, "}");
 }
 
-void *arena_allocate(void *data_context, size_t size) {
+void *arena_allocate(void *data_context, size_t size, size_t alignment) {
     struct Arena *self = (struct Arena *) data_context;
 
-    void *result = NULL;
+    void *allocation = (void *) align_forward(self->length + (intptr_t) self->begin, alignment);
+    ptrdiff_t padding = (intptr_t) allocation - ((intptr_t) self->begin + self->length);
+    assert((self->length + padding + size) <= self->capacity && "Out of memory");
 
-    size_t new_used_bytes = self->used_bytes + size;
-    if (new_used_bytes <= self->capacity_bytes) {
-        result = (void *) (self->used_bytes + (ptrdiff_t) self->memory);
-        self->used_bytes = new_used_bytes;
+    self->length += padding + size;
 
-        if (self->used_bytes > self->high_water_bytes) {
-            self->high_water_bytes = self->used_bytes;
-        }
-
-    } else {
-        assert(false && "out of memory");
-    }
-
-    return result;
+    return allocation;
 }
 
 void arena_release(void *data_context, void *address) { }
 
 void arena_clear(void *data_context) {
     struct Arena *self = (struct Arena *) data_context;
-    
-    self->used_bytes = 0;
+    self->length = 0;
 }
