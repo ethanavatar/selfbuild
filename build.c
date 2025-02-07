@@ -1,5 +1,5 @@
+#define SELF_BUILD_C_
 #include "self_build/self_build.h"
-#include "self_build/self_build.c"
 
 #define ALL_STDLIB_C_
 #include "self_build/all_stdlib.h"

@@ -15,6 +15,7 @@
 #endif // ALL_STDLIB_H_
 
 #ifdef ALL_STDLIB_C_
+#undef ALL_STDLIB_C_
 
 #include "stdlib/win32_platform.c"
 #include "stdlib/strings.c"
@@ -27,5 +28,4 @@
 #include "stdlib/list.c"
 #include "stdlib/libc_allocator.c"
 
-#undef ALL_STDLIB_C_
 #endif

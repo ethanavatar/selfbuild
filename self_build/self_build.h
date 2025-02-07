@@ -1,15 +1,7 @@
-#ifndef SELF_BUILD_H
-#define SELF_BUILD_H
+#ifndef SELF_BUILD_H_
+#define SELF_BUILD_H_
 
-#include "stdlib/win32_platform.h"
-#include "stdlib/strings.h"
-#include "stdlib/allocators.h"
-#include "stdlib/arena.h"
-#include "stdlib/thread_context.h"
-#include "stdlib/managed_arena.h"
-#include "stdlib/scratch_memory.h"
-#include "stdlib/string_builder.h"
-#include "stdlib/list.h"
+#include "self_build/all_stdlib.h"
 
 enum Build_Kind {
     Build_Kind_Static_Library,
@@ -85,4 +77,9 @@ struct Build_Context build_create_context(
     struct Allocator *allocator
 );
 
-#endif // SELF_BUILD_H
+#endif // SELF_BUILD_H_
+
+#ifdef SELF_BUILD_C_
+#undef SELF_BUILD_C_
+#include "self_build/self_build.c"
+#endif // SELF_BUILD_C_
