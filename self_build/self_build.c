@@ -13,10 +13,27 @@
 #include "stdlib/string_builder.h"
 #include "stdlib/scratch_memory.h"
 
-struct Build build_create(struct Build_Context *context, struct Build_Options options, char *name) {
+struct Build_Context build_create_context(
+    struct Build_Context_Options options,
+    char *self_build_path,
+    char *artifacts_directory,
+    struct Allocator *allocator
+) {
+    return (struct Build_Context) {
+        .current_directory   = win32_get_current_directory(allocator),
+        .debug_info_kind     = options.debug_info_kind,
+
+        .self_build_path     = clone(self_build_path, strlen(self_build_path), allocator),
+        .artifacts_directory = clone(artifacts_directory, strlen(artifacts_directory), allocator),
+
+        .allocator           = *allocator,
+    };
+}
+
+struct Build build_create(struct Build_Context *context, enum Build_Kind requested_kind, char *name) {
     struct Build b = {
         .context = context,
-        .options = options,
+        .kind    = requested_kind,
         .name    = name
     };
 
@@ -37,10 +54,13 @@ bool should_recompile(const char *source_file_path, const char *object_file_path
 
 void bootstrap(
     struct Build_Context *context,
-    const char *build_script_path, const char *executable_path,
-    const char *self_build_path
+    const char *build_script_path, const char *executable_path
 ) {
     struct Allocator scratch = scratch_begin(&context->allocator);
+
+    if (!win32_dir_exists(context->artifacts_directory)) {
+        win32_create_directories(context->artifacts_directory);
+    }
 
     bool should_exit = false;
     int  exit_code   = 0;
@@ -63,7 +83,7 @@ void bootstrap(
 
         int rebuild_success = win32_wait_for_command_format(
             "clang %s -o %s -std=c23 -I%s -O0 -g -gcodeview -Wl,--pdb=",
-            build_script_path, executable_path, self_build_path
+            build_script_path, executable_path, context->self_build_path
         );
 
         if (rebuild_success == 0) {
@@ -85,9 +105,13 @@ void bootstrap(
 
 struct Build build_submodule(
     struct Build_Context *context, char *module_directory,
-    struct Build_Options options
+    enum Build_Kind kind
 ) {
     struct Allocator scratch = scratch_begin(&context->allocator);
+
+    if (!win32_dir_exists(context->artifacts_directory)) {
+        win32_create_directories(context->artifacts_directory);
+    }
 
     char *module_artifacts_path = format_cstring(
         &scratch,
@@ -114,7 +138,7 @@ struct Build build_submodule(
     memcpy(&submodule_context, context, sizeof(struct Build_Context));
     submodule_context.current_directory = module_directory;
 
-    struct Build module_definition = build_function(&submodule_context, options);
+    struct Build module_definition = build_function(&submodule_context, kind);
     module_definition.root_dir = module_directory;
 
     scratch_end(&scratch);
@@ -124,6 +148,14 @@ struct Build build_submodule(
 size_t build_module(struct Build_Context *context, struct Build *build) {
     struct Allocator scratch = scratch_begin(&context->allocator);
     struct String_Builder sb = string_builder_create(&scratch);
+
+    if (!win32_dir_exists(context->artifacts_directory)) {
+        win32_create_directories(context->artifacts_directory);
+    }
+
+    if (build->root_dir == NULL) {
+        build->root_dir = "."; // @Hack
+    }
 
     for (size_t dep = 0; dep < list_length(build->dependencies); ++dep) {
         struct Build *module = &build->dependencies.items[dep];
@@ -216,7 +248,7 @@ void link_shared_library(struct Build_Context *, struct Build *, struct String *
 void link_executable    (struct Build_Context *, struct Build *, struct String *);
 
 void link_one(struct Build_Context *context, struct Build *build, struct String *artifacts) {
-    enum Build_Kind kind = build->options.build_kind;
+    enum Build_Kind kind = build->kind;
     static_assert(Build_Kind_COUNT == 3);
     if (0) { }
     else if (kind == Build_Kind_Static_Library) { link_static_library(context, build, artifacts); }
@@ -270,9 +302,9 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
         static_assert(Build_Kind_COUNT == 3);
         if (0) { }
-        else if (dependency.options.build_kind == Build_Kind_Static_Library) { extension = "lib"; }
-        else if (dependency.options.build_kind == Build_Kind_Shared_Library) { extension = "dll"; }
-        else if (dependency.options.build_kind == Build_Kind_Executable) {
+        else if (dependency.kind == Build_Kind_Static_Library) { extension = "lib"; }
+        else if (dependency.kind == Build_Kind_Shared_Library) { extension = "dll"; }
+        else if (dependency.kind == Build_Kind_Executable) {
             assert(false && "cant link against an executable");
         }
 
@@ -289,17 +321,17 @@ void link_objects(struct Build_Context *context, struct Build *build) {
 
         static_assert(Build_Kind_COUNT == 3);
         if (0) { }
-        else if (build->options.build_kind == Build_Kind_Static_Library) { arg_format = "%.*s.lib "; }
-        else if (build->options.build_kind == Build_Kind_Shared_Library) { arg_format = "-l%.*s ";   }
-        else if (build->options.build_kind == Build_Kind_Executable)     { arg_format = "-l%.*s ";   }
+        else if (build->kind == Build_Kind_Static_Library) { arg_format = "%.*s.lib "; }
+        else if (build->kind == Build_Kind_Shared_Library) { arg_format = "-l%.*s ";   }
+        else if (build->kind == Build_Kind_Executable)     { arg_format = "-l%.*s ";   }
         assert(arg_format != NULL);
 
         string_builder_append(&sb, arg_format, (int) flag.length, flag.data);
     }
 
     // @Clean
-    if ((build->options.build_kind == Build_Kind_Shared_Library) ||
-        (build->options.build_kind == Build_Kind_Executable)
+    if ((build->kind == Build_Kind_Shared_Library) ||
+        (build->kind == Build_Kind_Executable)
     ) {
         if ((context->debug_info_kind == Debug_Info_Kind_Portable) ||
             (context->debug_info_kind == Debug_Info_Kind_Embedded)
