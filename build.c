@@ -1,7 +1,7 @@
-#define SELF_BUILD_C_
+#define  SELF_BUILD_C_
 #include "self_build/self_build.h"
 
-#define ALL_STDLIB_C_
+#define  ALL_STDLIB_C_
 #include "self_build/all_stdlib.h"
 
 extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
@@ -33,7 +33,7 @@ int main(void) {
     struct Thread_Context tctx = { 0 };
     thread_context_init_and_equip(&tctx);
 
-    struct Allocator allocator = scratch_begin(NULL);
+    struct Allocator allocator   = scratch_begin(NULL);
     struct Build_Context context = build_create_context(options, ".", "bin", &allocator);
     
     bootstrap(&context, "build.c", "build.exe");
