@@ -70,7 +70,7 @@ int main(void) {
 
     // ----- Run the build -----
     struct Build module = build(&context, Build_Kind_Static_Library);
-    build_module(&context, &tests_exe);
+    build_module(&context, &module);
 
 
     // ----- Clean up -----
