@@ -12,6 +12,8 @@ char *format_cstring(struct Allocator *, const char *, ...);
 
 struct String cstring_to_string(char *cstring, struct Allocator *allocator);
 
+bool strings_are_equal(struct String s1, struct String s2);
+
 struct String_List {
     struct List_Header header;
     struct String *items;

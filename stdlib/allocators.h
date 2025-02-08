@@ -22,8 +22,8 @@ void *allocator_allocate_aligned (struct Allocator *, size_t, size_t);
 void  allocator_release  (struct Allocator *, void *);
 
 
-void *clone(void *data, size_t size, struct Allocator *allocator);
-intptr_t align_backward(intptr_t address, intptr_t alignment);
-intptr_t align_forward(intptr_t address, intptr_t alignment);
+void    *clone          (void *data, size_t size, struct Allocator *allocator);
+intptr_t align_backward (intptr_t address, intptr_t alignment);
+intptr_t align_forward  (intptr_t address, intptr_t alignment);
 
 #endif // ALLOCATORS_H

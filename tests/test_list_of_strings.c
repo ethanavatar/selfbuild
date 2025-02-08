@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-
 #include "stdlib/list.h"
 #include "stdlib/strings.h"
 
@@ -12,21 +9,20 @@ bool test_list_of_strings(struct Allocator *scratch) {
     list_append(&strings, cstring_to_string("to",   scratch));
     list_append(&strings, cstring_to_string("hair", scratch));
 
-    const char *expected[] = {
-        "Hair", "to", "hair",
+    struct String expected[] = {
+        cstring_to_string("Hair", scratch),
+        cstring_to_string("to",   scratch),
+        cstring_to_string("hair", scratch),
     };
 
     bool success = true;
 
-    for (size_t i = 0; i < list_length(strings); ++i) {
+    for (size_t i = 0; (i < list_length(strings)) && success; ++i) {
         struct String s = strings.items[i];
-        //fprintf(stderr, "%zu: %.*s\n", i, (int) s.length, s.data);
-
-        if (success) {
-            success = strncmp(s.data, expected[i], s.length) == 0; // @LibC @TODO
-        }
+        success = strings_are_equal(s, expected[i]);
     }
 
     list_destroy(&strings);
     return success;
 }
+

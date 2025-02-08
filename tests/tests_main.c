@@ -10,6 +10,7 @@
 #define TEST_FUNCTIONS         \
     X(test_clone)              \
     X(test_list_of_characters) \
+    X(test_strings_are_equal)  \
     X(test_list_of_strings)
 
 #define X(function) bool function(struct Allocator *);
@@ -34,9 +35,9 @@ int main(void) {
     bool tests_results[tests_count];
 
     for (size_t tests_index = 0; tests_index < tests_count; ++tests_index) {
-        struct Allocator scratch = scratch_begin(NULL);
-        tests_results[tests_index] = tests_functions[tests_index](&scratch);
-        scratch_end(&scratch);
+        struct Allocator scratch = scratch_begin(NULL); {
+            tests_results[tests_index] = tests_functions[tests_index](&scratch);
+        } scratch_end(&scratch);
 
         const char *pass_fail = tests_results[tests_index] ? "pass" : "fail";
         fprintf(stderr, "%s: %s\n", tests_names[tests_index], pass_fail);

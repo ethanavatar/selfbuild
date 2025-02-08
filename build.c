@@ -4,11 +4,12 @@
 #define  ALL_STDLIB_C_
 #include "self_build/all_stdlib.h"
 
-extern struct Build __declspec(dllexport) build(struct Build_Context *, enum Build_Kind);
-
-struct Build build(struct Build_Context *context, enum Build_Kind requested_kind) {
+extern struct Build __declspec(dllexport) build(
+    struct Build_Context *context,
+    enum   Build_Kind     kind
+) {
     struct Allocator *allocator = &context->allocator;
-    struct Build lib = build_create(context, requested_kind, "self_build");
+    struct Build lib = build_create(context, kind, "self_build");
 
     list_extend(&lib.sources, win32_list_files("stdlib",     "*.c", allocator));
     list_extend(&lib.sources, win32_list_files("self_build", "*.c", allocator));
@@ -16,9 +17,12 @@ struct Build build(struct Build_Context *context, enum Build_Kind requested_kind
     return lib;
 }
 
-struct Build build_tests(struct Build_Context *context, enum Build_Kind requested_kind) {
+struct Build build_tests(
+    struct Build_Context *context,
+    enum   Build_Kind     kind
+) {
     struct Allocator *allocator = &context->allocator;
-    struct Build test_exe = build_create(context, requested_kind, "tests");
+    struct Build test_exe = build_create(context, kind, "tests");
 
     list_extend(&test_exe.sources, win32_list_files("tests", "*.c", allocator));
 
@@ -33,7 +37,7 @@ int main(void) {
     struct Thread_Context tctx = { 0 };
     thread_context_init_and_equip(&tctx);
 
-    struct Allocator allocator   = scratch_begin(NULL);
+    struct Allocator   allocator = scratch_begin(NULL);
     struct Build_Context context = build_create_context(options, ".", "bin", &allocator);
     
     bootstrap(&context, "build.c", "build.exe");
