@@ -23,8 +23,6 @@ struct Build build_windowing(
     struct Build lib = build_create(context, kind, "windowing");
     list_extend(&lib.sources, win32_list_files("windowing", "*.c", allocator));
 
-    build_add_include_path(&exe, "windowing");
-
     build_add_system_library(&lib, "opengl32");
     build_add_system_library(&lib, "gdi32");
 

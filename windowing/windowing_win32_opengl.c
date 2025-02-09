@@ -4,10 +4,12 @@
 #include <gl/gl.h>
 #include "gl/wglext.h"
 
-static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
+#include "windowing/windowing.h"
+
+static PFNWGLCHOOSEPIXELFORMATARBPROC    wglChoosePixelFormatARB;
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 
-static PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
+PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
     HINSTANCE instance, WNDCLASSA class
 ) {
     struct Window_State dummy_state;
@@ -55,8 +57,7 @@ static PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
     return pixel_format_descriptor;
 }
 
-
-void window_opengl_set_rendering_context(
+HGLRC window_opengl_set_rendering_context(
     HWND window_handle, HDC device_context, PIXELFORMATDESCRIPTOR pixel_format_descriptor
 ) {
     int pixel_format = ChoosePixelFormat(device_context, &pixel_format_descriptor);
@@ -93,5 +94,7 @@ void window_opengl_set_rendering_context(
 
     HGLRC rendering_context = wglCreateContextAttribsARB(device_context, 0, wgl_context_attributes);
     wglMakeCurrent(device_context, rendering_context);
+
+    return rendering_context;
 }
 

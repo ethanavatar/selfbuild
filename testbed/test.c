@@ -91,16 +91,19 @@ int main(void) {
     struct Allocator persistent = scratch_begin(NULL);
 
     struct OpenGL_Description opengl_description = {
-        .profile = OpenGL_Profile_Core,
-        .major_version = SOGL_MAJOR_VERSION, .minor_version = SOGL_MINOR_VERSION,
+        .profile       = OpenGL_Profile_Core,
+        .major_version = SOGL_MAJOR_VERSION,
+        .minor_version = SOGL_MINOR_VERSION,
     };
 
     struct Window_Description window_description = {
         .title   = "Window Title",
         .width   = initial_width,
         .height  = initial_height,
-        .backend = Graphics_Backend_OpenGL,
-        .opengl  = opengl_description,
+        .backend = {
+            .kind   = Graphics_Backend_OpenGL,
+            .opengl = opengl_description,
+        },
     };
 
     struct Window window = window_create(window_description);
