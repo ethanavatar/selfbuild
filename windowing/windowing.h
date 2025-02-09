@@ -38,6 +38,8 @@ struct Window_State {
 
 struct Window {
     void *handle; // win32 HWND
+
+    // @TODO: Windows should probably have an arena of their own to allocate this state struct
     struct Window_State *state;
 };
 

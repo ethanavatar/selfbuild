@@ -130,15 +130,6 @@ static LRESULT CALLBACK window_proc(
             state->rendering_context = window_opengl_set_rendering_context(
                 hwnd, state->device_context, state->pixel_format_descriptor
             );
-
-            if (!sogl_loadOpenGL()) {
-                const char **failures = sogl_getFailures();
-                int i = 1;
-                while (*failures) {
-                    fprintf(stderr, "Failed to load function %s\n", *failures);
-                    failures++;
-                }
-            }
         }
 
     } else {

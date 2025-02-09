@@ -8,7 +8,6 @@
 #include "stdlib/win32_platform.h"
 
 #include "windowing/windowing.h"
-#include "windowing/drawing.h"
 
 #define SOGL_IMPL
 #include "windowing/sogl.h"
@@ -17,6 +16,8 @@
 #include "stb/stb_image.h"
 
 #include "cglm/cglm.h"
+
+struct Color { float r, g, b, a; };
 
 const int initial_width  = 800;
 const int initial_height = 600;
@@ -162,7 +163,11 @@ int main(void) {
         double seconds_since_start = time - start_time_seconds;
 
         window_draw_begin(&window); {
-            draw_background_clear((struct Color) { 0.2f, 0.3f, 0.3f, 1.0f });
+            {
+                struct Color color = { 0.2f, 0.3f, 0.3f, 1.0f };
+                glClearColor(color.r, color.g, color.b, color.a);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            }
 
             mat4 identity = GLM_MAT4_IDENTITY;
 
