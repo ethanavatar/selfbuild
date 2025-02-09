@@ -10,10 +10,8 @@ struct File_Contents file_read_to_end(
     struct File_Contents result = { 0 };
     HANDLE file_handle = CreateFileA(
         file_path,
-        GENERIC_READ,
-        0, NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
+        GENERIC_READ, 0, NULL,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
         NULL
     );
 

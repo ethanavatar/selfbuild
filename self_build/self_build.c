@@ -40,6 +40,7 @@ struct Build build_create(struct Build_Context *context, enum Build_Kind request
     list_init(&b.sources,       &context->allocator);
     list_init(&b.includes,      &context->allocator);
     list_init(&b.compile_flags, &context->allocator);
+    list_init(&b.link_flags, &context->allocator);
     list_init(&b.system_dependencies, &context->allocator);
     list_init(&b.dependencies,  &context->allocator);
 
@@ -293,6 +294,14 @@ void link_objects(struct Build_Context *context, struct Build *build) {
             &sb, "%s/%s/%.*s.o ",
             context->artifacts_directory, build->root_dir,
             (int) source.length, source.data
+        );
+    }
+
+    for (size_t i = 0; i < list_length(build->link_flags); ++i) {
+        struct String flag = build->link_flags.items[i];
+        string_builder_append(
+            &sb, "%.*s ",
+            (int) flag.length, flag.data
         );
     }
 

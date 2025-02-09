@@ -34,6 +34,7 @@ struct Build {
 
     struct String_List sources;
     struct String_List compile_flags;
+    struct String_List link_flags;
     struct String_List system_dependencies;
     struct String_List includes;
 

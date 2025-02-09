@@ -10,9 +10,26 @@ extern struct Build __declspec(dllexport) build(
 ) {
     struct Allocator *allocator = &context->allocator;
     struct Build lib = build_create(context, kind, "self_build");
-
     list_extend(&lib.sources, win32_list_files("stdlib",     "*.c", allocator));
     list_extend(&lib.sources, win32_list_files("self_build", "*.c", allocator));
+    return lib;
+}
+
+struct Build build_windowing(
+    struct Build_Context *context,
+    enum   Build_Kind     kind
+) {
+    struct Allocator *allocator = &context->allocator;
+    struct Build lib = build_create(context, kind, "windowing");
+    list_extend(&lib.sources, win32_list_files("windowing", "*.c", allocator));
+
+    build_add_include_path(&exe, "windowing");
+
+    build_add_system_library(&lib, "opengl32");
+    build_add_system_library(&lib, "gdi32");
+
+    // @TODO: Add this as a context option
+    list_append(&lib.link_flags, cstring_to_string("-fsanitize=address,undefined", allocator));
 
     return lib;
 }
@@ -23,10 +40,22 @@ struct Build build_tests(
 ) {
     struct Allocator *allocator = &context->allocator;
     struct Build test_exe = build_create(context, kind, "tests");
-
     list_extend(&test_exe.sources, win32_list_files("tests", "*.c", allocator));
-
     return test_exe;
+}
+
+struct Build build_testbed(
+    struct Build_Context *context,
+    enum   Build_Kind     kind
+) {
+    struct Allocator *allocator = &context->allocator;
+    struct Build exe = build_create(context, kind, "testbed");
+    build_add_include_path(&exe, "cglm/include");
+    list_extend(&exe.sources,  win32_list_files("testbed", "*.c", allocator));
+
+    list_append(&exe.link_flags, cstring_to_string("-fsanitize=address,undefined", allocator));
+
+    return exe;
 }
 
 static struct Build_Context_Options options = {
@@ -42,11 +71,17 @@ int main(void) {
     
     bootstrap(&context, "build.c", "build.exe");
 
-    struct Build module    = build(&context, Build_Kind_Static_Library);
-    struct Build tests_exe = build_tests(&context, Build_Kind_Executable);
+    struct Build stdlib    = build           (&context, Build_Kind_Static_Library);
+    struct Build tests     = build_tests     (&context, Build_Kind_Executable);
+    struct Build windowing = build_windowing (&context, Build_Kind_Shared_Library);
+    struct Build testbed   = build_testbed   (&context, Build_Kind_Executable);
 
-    add_dependency(&tests_exe, module);
-    build_module(&context, &tests_exe);
+    add_dependency(&tests, stdlib);
+    build_module(&context, &tests);
+
+    add_dependency(&testbed, stdlib);
+    add_dependency(&testbed, windowing);
+    build_module(&context, &testbed);
 
     scratch_end(&allocator);
     thread_context_release();

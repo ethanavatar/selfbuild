@@ -19,10 +19,6 @@ void *allocator_allocate_aligned(
     return address;
 }
 
-void *allocator_allocate(struct Allocator *allocator, size_t size) {
-    return allocator_allocate_aligned(allocator, size, default_alignment);
-}
-
 void allocator_release(struct Allocator *allocator, void *address) {
     if (allocator->release && address != NULL) {
         allocator->release(allocator->data_context, address);

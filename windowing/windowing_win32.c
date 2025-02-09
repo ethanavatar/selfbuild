@@ -1,10 +1,15 @@
 #if defined(_WIN32)
 #include "windowing/windowing.h"
 #include "windowing/windowing_win32_private.h"
+
+#define SOGL_IMPL
+#include "sogl.h"
+// Needs to be included after sogl
 #include "windowing/windowing_win32_opengl.h"
 
 #include <windows.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,6 +58,16 @@ struct Window window_create(struct Window_Description description) {
 
     if (description.backend == Graphics_Backend_OpenGL) {
         window_opengl_set_rendering_context(w.handle, w.device_context, opengl_pixel_format);
+
+
+        if (!sogl_loadOpenGL()) {
+            const char **failures = sogl_getFailures();
+            int i = 1;
+            while (*failures) {
+                fprintf(stderr, "Failed to load function %s\n", *failures);
+                failures++;
+            }
+        }
     }
 
     // https://stackoverflow.com/questions/11118443/why-we-need-to-call-updatewindow-following-showwindow#11119645

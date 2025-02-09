@@ -16,11 +16,10 @@ struct Allocator {
     Allocator_Release  release;
 };
 
-void *allocator_allocate (struct Allocator *, size_t);
 void *allocator_allocate_aligned (struct Allocator *, size_t, size_t);
+void  allocator_release          (struct Allocator *, void *);
 
-void  allocator_release  (struct Allocator *, void *);
-
+#define allocator_allocate(_allocator, _size) allocator_allocate_aligned(_allocator, _size, alignof(size_t))
 
 void    *clone          (void *data, size_t size, struct Allocator *allocator);
 intptr_t align_backward (intptr_t address, intptr_t alignment);

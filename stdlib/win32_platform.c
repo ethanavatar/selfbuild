@@ -280,3 +280,12 @@ void win32_delete_file(char *file_path) {
     DeleteFile(file_path);
 }
 
+int64_t win32_get_system_timestamp(void) {
+    FILETIME file_time;
+    GetSystemTimeAsFileTime(&file_time);
+    ULARGE_INTEGER uli;
+    uli.LowPart = file_time.dwLowDateTime;
+    uli.HighPart = file_time.dwHighDateTime;
+    return (int64_t) uli.QuadPart;
+}
+

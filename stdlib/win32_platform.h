@@ -33,4 +33,6 @@ void *win32_create_file(char *file_path);
 void  win32_close_file(void *handle);
 void  win32_delete_file(char *file_path);
 
+int64_t win32_get_system_timestamp(void);
+
 #endif // WIN32_PLATFORM_H
