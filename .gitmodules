@@ -4,6 +4,3 @@
 [submodule "cglm"]
 	path = cglm
 	url = git@github.com:recp/cglm.git
-[submodule "windowing/simple-opengl-loader"]
-	path = windowing/simple-opengl-loader
-	url = git@github.com:tsherif/simple-opengl-loader.git
