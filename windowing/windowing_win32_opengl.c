@@ -5,6 +5,7 @@
 #include "gl/wglext.h"
 
 #include "windowing/windowing.h"
+#include "windowing/windowing_opengl.h"
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC    wglChoosePixelFormatARB;
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;

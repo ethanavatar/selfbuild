@@ -1,5 +1,6 @@
 #if defined(_WIN32)
 #include "windowing/windowing.h"
+#include "windowing/windowing_opengl.h"
 
 #define SOGL_IMPL
 #include "sogl.h"
@@ -10,33 +11,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-PIXELFORMATDESCRIPTOR window_opengl_set_pixel_format(
-    HINSTANCE instance, WNDCLASSA class
-);
-
-HGLRC window_opengl_set_rendering_context(
-    HWND window_handle, HDC device_context, PIXELFORMATDESCRIPTOR pixel_format_descriptor
-);
-
-inline static struct Window_State *window_get_state_from_handle(void *handle) {
-    LONG_PTR ptr = GetWindowLongPtrA(handle, GWLP_USERDATA);
-    struct Window_State *state = (struct Window_State *) ptr;
-    return state;
-}
-
 static LRESULT CALLBACK window_proc(
     HWND hwnd, UINT msg,
     WPARAM wParam, LPARAM lParam
 );
 
-struct Window window_create(struct Window_Description description) {
-    HINSTANCE current_process_handle = GetModuleHandleA(NULL);
+static bool      window_class_is_registered = false;
+static WNDCLASSA window_class = { 0 };
+static WNDCLASSA window_get_or_register_class(HINSTANCE process_handle) {
+    if (!window_class_is_registered) {
+        window_class.lpszClassName = "libwindowing";
+        window_class.hInstance     = process_handle;
+        window_class.lpfnWndProc   = window_proc;
+        RegisterClassA(&window_class);
+    }
 
-    WNDCLASSA class = { 0 };
-    class.lpszClassName = "Some Window Class";
-    class.hInstance     = current_process_handle;
-    class.lpfnWndProc   = window_proc;
-    RegisterClassA(&class);
+    return window_class;
+}
+
+struct Window window_create(struct Window_Description description) {
+    HINSTANCE process_handle = GetModuleHandleA(NULL);
+    WNDCLASSA class = window_get_or_register_class(process_handle);
 
     RECT border_rect = { 0 };
     AdjustWindowRectEx(&border_rect, WS_OVERLAPPEDWINDOW, 0, 0);
@@ -52,14 +47,14 @@ struct Window window_create(struct Window_Description description) {
 
     if (description.backend.kind == Graphics_Backend_OpenGL) {
         w.state->pixel_format_descriptor = window_opengl_set_pixel_format(
-            current_process_handle, class
+            process_handle, class
         );
     }
 
     w.handle = CreateWindowExA(
         0, class.lpszClassName, description.title,
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
-        NULL, NULL, current_process_handle,
+        NULL, NULL, process_handle,
         w.state
     );
 
@@ -78,6 +73,12 @@ void window_destroy(struct Window *window) {
     if (window->state) {
         free(window->state); // @libc
     }
+
+    HINSTANCE process_handle = GetModuleHandleA(NULL);
+    UnregisterClassA(
+        window_get_or_register_class(process_handle).lpszClassName,
+        process_handle
+    );
 }
 
 bool window_should_close(struct Window window) {
@@ -133,7 +134,8 @@ static LRESULT CALLBACK window_proc(
         }
 
     } else {
-        state = window_get_state_from_handle(hwnd);
+        LONG_PTR ptr = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+        state = (struct Window_State *) ptr;
     }
 
     LRESULT result = 0;
@@ -151,6 +153,7 @@ static LRESULT CALLBACK window_proc(
         state->should_close = true;
 
         if (state->backend.kind == Graphics_Backend_OpenGL) {
+            //fprintf(stderr, "Destroying Context.");
             wglMakeCurrent(NULL, NULL);
             ReleaseDC(hwnd, state->device_context);
             wglDeleteContext(state->rendering_context);

@@ -16,6 +16,13 @@ enum Debug_Info_Kind {
     Debug_Info_Kind_Embedded,
 };
 
+enum Sanitizers_Kind {
+    Sanitizers_Kind_None      = 0x0,
+    Sanitizers_Kind_Address   = 0x1 << 1,
+    Sanitizers_Kind_Undefined = 0x1 << 2,
+    Sanitizers_Kind_Integer   = 0x1 << 3,
+};
+
 struct Build_Context {
     char *artifacts_directory;
     char *current_directory;
@@ -23,6 +30,7 @@ struct Build_Context {
     struct Allocator allocator;
 
     enum Debug_Info_Kind debug_info_kind;
+    enum Sanitizers_Kind sanitizers;
     bool is_bootstrapped;
 };
 
@@ -69,6 +77,7 @@ void build_add_include_path(struct Build *build, char *include_path);
 
 struct Build_Context_Options {
     enum Debug_Info_Kind debug_info_kind;
+    enum Sanitizers_Kind sanitizers;
 };
 
 struct Build_Context build_create_context(

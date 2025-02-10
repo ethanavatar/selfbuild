@@ -26,9 +26,6 @@ struct Build build_windowing(
     build_add_system_library(&lib, "opengl32");
     build_add_system_library(&lib, "gdi32");
 
-    // @TODO: Add this as a context option
-    list_append(&lib.link_flags, cstring_to_string("-fsanitize=address,undefined", allocator));
-
     return lib;
 }
 
@@ -51,13 +48,13 @@ struct Build build_testbed(
     build_add_include_path(&exe, "cglm/include");
     list_extend(&exe.sources,  win32_list_files("testbed", "*.c", allocator));
 
-    list_append(&exe.link_flags, cstring_to_string("-fsanitize=address,undefined", allocator));
-
     return exe;
 }
 
 static struct Build_Context_Options options = {
     .debug_info_kind = Debug_Info_Kind_Portable,
+    //.sanitizers      = Sanitizers_Kind_Address | Sanitizers_Kind_Undefined,
+    .sanitizers      = Sanitizers_Kind_Undefined | Sanitizers_Kind_Integer,
 };
 
 int main(void) {

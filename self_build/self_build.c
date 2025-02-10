@@ -22,6 +22,7 @@ struct Build_Context build_create_context(
     return (struct Build_Context) {
         .current_directory   = win32_get_current_directory(allocator),
         .debug_info_kind     = options.debug_info_kind,
+        .sanitizers          = options.sanitizers,
 
         .self_build_path     = clone(self_build_path, strlen(self_build_path), allocator),
         .artifacts_directory = clone(artifacts_directory, strlen(artifacts_directory), allocator),
@@ -351,6 +352,13 @@ void link_objects(struct Build_Context *context, struct Build *build) {
                 string_builder_append(&sb, "-Wl,--pdb= ");
             }
         }
+
+        if (context->sanitizers != Sanitizers_Kind_None) {
+            if (context->sanitizers & Sanitizers_Kind_Address)   { string_builder_append(&sb, "-fsanitize=address ");   }
+            if (context->sanitizers & Sanitizers_Kind_Undefined) { string_builder_append(&sb, "-fsanitize=undefined "); }
+            if (context->sanitizers & Sanitizers_Kind_Integer)   { string_builder_append(&sb, "-fsanitize=integer ");   }
+        }
+
     }
 
     struct String artifacts = string_builder_to_string(&sb, &scratch);
