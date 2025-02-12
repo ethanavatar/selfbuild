@@ -20,7 +20,8 @@ struct Build_Context build_create_context(
     struct Allocator *allocator
 ) {
     return (struct Build_Context) {
-        .current_directory   = win32_get_current_directory(allocator),
+        //.current_directory   = win32_get_current_directory(allocator),
+        .current_directory   = ".",
         .debug_info_kind     = options.debug_info_kind,
         .sanitizers          = options.sanitizers,
 
@@ -131,10 +132,10 @@ struct Build build_submodule(
         module_directory, context->self_build_path, module_dll_path
     );
 
-    void *build_module = win32_load_library(module_dll_path);
-    assert(build_module && "failed to load module");
+    void *module = win32_load_library(module_dll_path);
+    assert(module && "failed to load module");
 
-    Build_Function build_function = (Build_Function) win32_get_symbol_address(build_module, "build");
+    Build_Function build_function = (Build_Function) win32_get_symbol_address(module, "build");
 
     struct Build_Context submodule_context = { 0 };
     memcpy(&submodule_context, context, sizeof(struct Build_Context));

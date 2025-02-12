@@ -9,9 +9,14 @@ extern struct Build __declspec(dllexport) build(
     enum   Build_Kind     kind
 ) {
     struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
     struct Build lib = build_create(context, kind, "self_build");
-    list_extend(&lib.sources, win32_list_files("stdlib",     "*.c", allocator));
-    list_extend(&lib.sources, win32_list_files("self_build", "*.c", allocator));
+    list_extend(&lib.sources, win32_list_files("stdlib", cwd, "*.c", allocator));
+    list_extend(&lib.sources, win32_list_files("self_build", cwd, "*.c", allocator));
+
+    build_add_system_library(&lib, "dbghelp");
+
     return lib;
 }
 
@@ -20,8 +25,10 @@ struct Build build_windowing(
     enum   Build_Kind     kind
 ) {
     struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
     struct Build lib = build_create(context, kind, "windowing");
-    list_extend(&lib.sources, win32_list_files("windowing", "*.c", allocator));
+    list_extend(&lib.sources, win32_list_files("windowing", cwd, "*.c", allocator));
 
     build_add_system_library(&lib, "opengl32");
     build_add_system_library(&lib, "gdi32");
@@ -34,8 +41,10 @@ struct Build build_tests(
     enum   Build_Kind     kind
 ) {
     struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
     struct Build test_exe = build_create(context, kind, "tests");
-    list_extend(&test_exe.sources, win32_list_files("tests", "*.c", allocator));
+    list_extend(&test_exe.sources, win32_list_files("tests", cwd, "*.c", allocator));
     return test_exe;
 }
 
@@ -44,9 +53,11 @@ struct Build build_testbed(
     enum   Build_Kind     kind
 ) {
     struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
     struct Build exe = build_create(context, kind, "testbed");
     build_add_include_path(&exe, "cglm/include");
-    list_extend(&exe.sources,  win32_list_files("testbed", "*.c", allocator));
+    list_extend(&exe.sources,  win32_list_files("testbed", cwd, "*.c", allocator));
 
     return exe;
 }

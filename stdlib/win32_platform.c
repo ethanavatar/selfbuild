@@ -102,6 +102,38 @@ void win32_print_last_error(void) {
     fprintf(stderr, "%#8lX: %.*s\n", lastError, (int) size, messageBuffer);
 }
 
+/*
+#include <dbghelp.h>
+
+void printStack( void );
+void printStack( void )
+{
+     unsigned int   i;
+     void         * stack[ 100 ];
+     unsigned short frames;
+     SYMBOL_INFO  * symbol;
+     HANDLE         process;
+
+     process = GetCurrentProcess();
+
+     SymInitialize( process, NULL, TRUE );
+
+     frames               = CaptureStackBackTrace( 0, 100, stack, NULL );
+     symbol               = ( SYMBOL_INFO * )calloc( sizeof( SYMBOL_INFO ) + 256 * sizeof( char ), 1 );
+     symbol->MaxNameLen   = 255;
+     symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
+
+     for( i = 0; i < frames; i++ )
+     {
+         SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
+
+         printf( "%i: %s - 0x%0llX\n", frames - i - 1, symbol->Name, symbol->Address );
+     }
+
+     free( symbol );
+}
+*/
+
 // https://stackoverflow.com/a/6218957
 bool win32_dir_exists(const char *path) {
 #if 0
@@ -112,7 +144,12 @@ bool win32_dir_exists(const char *path) {
 #else
     BOOL exists = FALSE;
     BOOL ok = DirectoryExists(path, &exists);
-    assert(ok);
+
+    if (!ok) {
+        fprintf(stderr, "%s", path);
+        //printStack();
+        assert(false && "path not found");
+    }
 
     return exists == TRUE;
 #endif
@@ -226,12 +263,15 @@ void win32_create_directories(const char *path) {
     CreateDirectory(temp, NULL);
 }
 
-struct String_List win32_list_files(char *directory, char *file_pattern, struct Allocator *allocator) {
-    const char *pattern = format_cstring(allocator, "%s/%s", directory, file_pattern);
+struct String_List win32_list_files(char *directory, char *cwd, char *file_pattern, struct Allocator *allocator) {
+    const char *pattern = format_cstring(allocator, "%s/%s/%s", cwd, directory, file_pattern);
 
     WIN32_FIND_DATA ffd;
     HANDLE hFind = FindFirstFileA(pattern, &ffd);
-    assert(hFind != INVALID_HANDLE_VALUE);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "%s\n", pattern);
+        assert(false);
+    }
 
     struct String_List files = { 0 };
     list_init(&files, allocator);
