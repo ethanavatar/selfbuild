@@ -9,8 +9,10 @@ extern struct Build __declspec(dllexport) build(
     enum   Build_Kind     kind
 ) {
     struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
     struct Build lib = build_create(context, kind, "main");
-    list_extend(&lib.sources, win32_list_files("src", "*.c", allocator));
+    list_extend(&lib.sources, win32_list_files("src", cwd, "*.c", allocator));
     return lib;
 }
 
