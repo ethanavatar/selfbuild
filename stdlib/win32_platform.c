@@ -189,22 +189,23 @@ int win32_wait_for_command(
 ) {
     struct Allocator scratch = scratch_begin(NULL);
     char *command = format_cstring(&scratch, "%s %s", path, parameters);
-    int exit_code = win32_wait_for_command_ex(command);
+
+    char cwd[MAX_PATH] = { 0 };
+    DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
+
+    int exit_code = win32_wait_for_command_ex(command, cwd);
     scratch_end(&scratch);
 
     return exit_code;
 }
 
-int win32_wait_for_command_ex(char *command) {
+int win32_wait_for_command_ex(char *command, char *cwd) {
     STARTUPINFO startup_info = { 0 };
     startup_info.cb         = sizeof(startup_info);
     startup_info.dwFlags    = STARTF_USESTDHANDLES;
     startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
     startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     startup_info.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-
-    char cwd[MAX_PATH] = { 0 };
-    DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
 
     PROCESS_INFORMATION process_info = { 0 };
     CreateProcessA(
@@ -233,9 +234,29 @@ int win32_wait_for_command_format(const char *format, ...) {
     string_builder_append_vargs(&sb, format, format_args);
     va_end(format_args);
 
+    char cwd[MAX_PATH] = { 0 };
+    DWORD a = GetCurrentDirectory(MAX_PATH, cwd);
+
     struct String_View command = string_builder_as_string(&sb);
     fprintf(stderr, "+ %.*s\n", (int) command.length, command.data);
-    int exit_code = win32_wait_for_command_ex(command.data);
+    int exit_code = win32_wait_for_command_ex(command.data, cwd);
+
+    scratch_end(&scratch);
+    return exit_code;
+}
+
+int win32_wait_for_command_format_ex(char *cwd, const char *format, ...) {
+    struct Allocator scratch = scratch_begin(NULL);
+    struct String_Builder sb = string_builder_create(&scratch);
+
+    va_list format_args;
+    va_start(format_args, format);
+    string_builder_append_vargs(&sb, format, format_args);
+    va_end(format_args);
+
+    struct String_View command = string_builder_as_string(&sb);
+    fprintf(stderr, "+ %.*s\n", (int) command.length, command.data);
+    int exit_code = win32_wait_for_command_ex(command.data, cwd);
 
     scratch_end(&scratch);
     return exit_code;

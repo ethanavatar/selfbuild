@@ -20,6 +20,18 @@ extern struct Build __declspec(dllexport) build(
     return lib;
 }
 
+struct Build build_cli(
+    struct Build_Context *context,
+    enum   Build_Kind     kind
+) {
+    struct Allocator *allocator = &context->allocator;
+    char *cwd = context->current_directory;
+
+    struct Build test_exe = build_create(context, kind, "cproject");
+    list_extend(&test_exe.sources, win32_list_files("cli", cwd, "*.c", allocator));
+    return test_exe;
+}
+
 struct Build build_windowing(
     struct Build_Context *context,
     enum   Build_Kind     kind
@@ -78,9 +90,13 @@ int main(void) {
     bootstrap(&context, "build.c", "build.exe");
 
     struct Build stdlib    = build           (&context, Build_Kind_Static_Library);
+    struct Build cli       = build_cli       (&context, Build_Kind_Executable);
     struct Build tests     = build_tests     (&context, Build_Kind_Executable);
     struct Build windowing = build_windowing (&context, Build_Kind_Shared_Library);
     struct Build testbed   = build_testbed   (&context, Build_Kind_Executable);
+
+    add_dependency(&cli, stdlib);
+    build_module(&context, &cli);
 
     add_dependency(&tests, stdlib);
     build_module(&context, &tests);

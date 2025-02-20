@@ -24,7 +24,7 @@ int main(void) {
     thread_context_init_and_equip(&tctx);
 
     struct Allocator   allocator = scratch_begin(NULL);
-    struct Build_Context context = build_create_context(options, "..", "bin", &allocator);
+    struct Build_Context context = build_create_context(options, "selfbuild", "bin", &allocator);
     
     bootstrap(&context, "build.c", "build.exe");
 

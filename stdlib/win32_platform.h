@@ -22,8 +22,9 @@ bool      win32_dir_exists(const char *);
 bool      win32_file_exists(const char *);
 long long win32_get_file_last_modified_time(const char *);
 int       win32_wait_for_command(const char *, const char *);
-int       win32_wait_for_command_ex(char *); // @Nit: I would like this to take a `const char *` somehow
+int       win32_wait_for_command_ex(char *, char *);
 int       win32_wait_for_command_format(const char *, ...);
+int       win32_wait_for_command_format_ex(char *, const char *, ...);
 void      win32_create_directories(const char *);
 
 struct String_List win32_list_files(char *directory, char *cwd, char *file_pattern, struct Allocator *allocator);

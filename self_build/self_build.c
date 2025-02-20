@@ -91,7 +91,7 @@ void bootstrap(
 
         if (rebuild_success == 0) {
             should_exit = true;
-            exit_code = win32_wait_for_command_ex("build.exe");
+            exit_code = win32_wait_for_command_ex("build.exe", context->current_directory);
 
         } else {
             win32_move_file(old_executable_path, executable_path, File_Move_Flags_None);
